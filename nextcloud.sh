@@ -59,9 +59,19 @@ start
 stop
 restart
 update
+updateself
 help
 
 EOT
+}
+
+function downloadSelf() {
+    if curl -s -w "http_code %{http_code}" -o ${SCRIPT_PATH}.temp ${GITHUB_BASE_URL}/nextcloud.sh | grep -q "^http_code 20[0-9]"; then
+        mv ${SCRPT_PATH}.temp ${SCRIPT_PATH}
+        chmod u+x ${SCRIPT_PATH}
+    else
+        rm -f ${SCRIPT_PATH}.temp
+    fi
 }
 
 function checkDataDirectory() {
@@ -183,6 +193,10 @@ case ${1:-""} in
         setComposeFile
         docker-compose pull
         echo "Now restart nextcloud."
+        ;;
+    "updateself")
+        downloadSelf
+        echo "Updated self."
         ;;
     "help")
         listCommands
