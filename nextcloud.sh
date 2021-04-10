@@ -30,6 +30,24 @@ declare -r SCRIPT_PATH="${SCRIPT_DIR}/${SCRIPT_NAME}"
 declare -r DATA_DIR="${SCRIPT_DIR}/ncdata"
 declare -r YML=${DATA_DIR}/ncdocker/docker-compose.yml
 
+declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master"
+
+if type docker > /dev/null 2>&1; then
+    docker --version
+else
+    echo "Install docker." 1>&2
+    exit 1
+fi
+
+if type docker-compose > /dev/null 2>&1; then
+    docker-compose --version
+else
+    echo "Install docker-compose." 1>&2
+    exit 1
+fi
+
+echo
+
 # Functions
 
 function listCommands() {
