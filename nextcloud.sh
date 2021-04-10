@@ -126,6 +126,7 @@ function createDockerComposeYml() {
     inputEnv "Enter MYSQL_DATABASE(e.g. nextcloud): " MYSQL_DATABASE
     inputEnv "Enter MYSQL_USER(e.g. nextcloud): " MYSQL_USER
     inputEnv "Enter MYSQL_HOST(e.g. nextcloud): " MYSQL_HOST
+    inputEnv "Enter PORT(e.g. 8080): " PORT
 
     mkdir -p ${DATA_DIR}/ncdocker
 
@@ -149,7 +150,7 @@ services:
     image: nextcloud
     restart: always
     ports:
-      - 8080:80
+      - ${PORT}:80
     links:
       - db
     volumes:
