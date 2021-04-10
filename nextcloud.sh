@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -u
 
-cat << "EOF"
+cat << EOF
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 □■□□□□■■■□■■■■■■■□□■■■□■■■□□■■■■■■■□□□□■■■□■□□■■■■□□□□□□□■■■□□□□■■■□□■■■□■■■■■□□□
@@ -60,7 +60,7 @@ function setComposeFile() {
 function inputEnv() {
     local -r PROMPT_MESSAGE=${1}
     local -r ENV_NAME=${2}
-    local -r IS_SECRET=${3:-0} # 0 is false or 1 is true
+    local -r IS_SECRET=${3:-0} # 0 is false and 1 is true
 
     while :
     do
@@ -71,12 +71,11 @@ function inputEnv() {
             tty -s && echo "" # -s つけると改行がいるっぽい
         fi
 
-        
         if [ -z "${input}" ]; then
             echo "An empty value must not be set. Type again." 1>&2
             continue
         fi
-        
+
         if [ ! "${IS_SECRET}" -eq 0 ]; then
             read -sp "Input again for confirmation: " confirmationInput
             tty -s && echo "" # -s つけると改行がいるっぽい
@@ -87,7 +86,7 @@ function inputEnv() {
         fi
 
         eval ${ENV_NAME}=${input}
-	break
+        break
     done
  
 }
@@ -96,9 +95,9 @@ function createDockerComposeYml() {
 
     inputEnv "Enter MYSQL_ROOT_PASSWORD: " MYSQL_ROOT_PASSWORD 1
     inputEnv "Enter MYSQL_PASSWORD: " MYSQL_PASSWORD 1
-    inputEnv  "Enter MYSQL_DATABASE(e.g. nextcloud): " MYSQL_DATABASE
-    inputEnv  "Enter MYSQL_USER(e.g. nextcloud): " MYSQL_USER
-    inputEnv  "Enter MYSQL_HOST(e.g. nextcloud): " MYSQL_HOST
+    inputEnv "Enter MYSQL_DATABASE(e.g. nextcloud): " MYSQL_DATABASE
+    inputEnv "Enter MYSQL_USER(e.g. nextcloud): " MYSQL_USER
+    inputEnv "Enter MYSQL_HOST(e.g. nextcloud): " MYSQL_HOST
 
     mkdir -p ${DATA_DIR}/ncdocker
 
@@ -139,36 +138,36 @@ EOF
 
 case ${1:-""} in
     "install")
-	if [ -d "${DATA_DIR}" ]; then
-	    echo "${DATA_DIR} already exists"
-	    exit 1
-	fi
-	createDockerComposeYml
-	;;
+        if [ -d "${DATA_DIR}" ]; then
+            echo "${DATA_DIR} already exists"
+            exit 1
+        fi
+        createDockerComposeYml
+        ;;
     "start")
-	checkDataDirectory
+        checkDataDirectory
         setComposeFile
         docker-compose up -d
         ;;
     "stop")
-	checkDataDirectory
+        checkDataDirectory
         setComposeFile
         docker-compose down
         ;;
     "restart")
-	checkDataDirectory
+        checkDataDirectory
         setComposeFile
         docker-compose down
         docker-compose up -d
         ;;
+    "update")
+        checkDataDirectory
+        setComposeFile
+        docker-compose pull
+        echo "Now restart nextcloud."
+        ;;
     "help")
         listCommands
-        ;;
-    "update")
-	checkDataDirectory
-	setComposeFile
-        docker-compose pull
-	echo "Now restart nextcloud."
         ;;
     *)
         echo "No command found."
