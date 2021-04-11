@@ -5,6 +5,7 @@ First, download this script.
 
 ```bash
 curl https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master/nextcloud.sh -o nextcloud.sh
+chmod 755 nextcloud.sh
 ```
 
 Then,
