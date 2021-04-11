@@ -168,7 +168,7 @@ EOF
 case ${1:-""} in
     "install")
         if [ -d "${DATA_DIR}" ]; then
-            echo "${DATA_DIR} already exists"
+            echo "${DATA_DIR} already exists."
             exit 1
         fi
         createDockerComposeYml
