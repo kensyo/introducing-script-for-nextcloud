@@ -46,7 +46,7 @@ else
     exit 1
 fi
 
-echo
+echo ""
 
 # Functions
 
