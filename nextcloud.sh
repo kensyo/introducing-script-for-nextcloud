@@ -32,6 +32,10 @@ declare -r YML=${DATA_DIR}/ncdocker/docker-compose.yml
 
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master"
 
+declare -r VERSION=v3
+
+echo "SCRIPT VERSION: ${VERSION}"
+
 if type docker > /dev/null 2>&1; then
     docker --version
 else
