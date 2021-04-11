@@ -69,8 +69,11 @@ function downloadSelf() {
     if curl -s -w "http_code %{http_code}" -o ${SCRIPT_PATH}.temp ${GITHUB_BASE_URL}/nextcloud.sh | grep -q "^http_code 20[0-9]"; then
         mv ${SCRIPT_PATH}.temp ${SCRIPT_PATH}
         chmod u+x ${SCRIPT_PATH}
+        echo "Updated self."
     else
         rm -f ${SCRIPT_PATH}.temp
+        echo "Update failed. Http Status Code was not 20X." 1>&2
+        exit 1
     fi
 }
 
@@ -197,7 +200,6 @@ case ${1:-""} in
         ;;
     "updateself")
         downloadSelf
-        echo "Updated self."
         ;;
     "help")
         listCommands
