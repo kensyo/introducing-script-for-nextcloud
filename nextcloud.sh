@@ -32,7 +32,7 @@ declare -r YML=${DATA_DIR}/ncdocker/docker-compose.yml
 
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master"
 
-declare -r VERSION=v6
+declare -r VERSION=v7
 
 echo "SCRIPT VERSION: ${VERSION}"
 
@@ -198,8 +198,7 @@ case ${1:-""} in
     "update")
         checkDataDirectory
         setComposeFile
-        docker-compose pull
-        echo "Now restart nextcloud."
+        docker-compose pull && echo "Now restart nextcloud."
         ;;
     "updateself")
         downloadSelf
