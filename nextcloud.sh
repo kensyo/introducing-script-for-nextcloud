@@ -132,7 +132,6 @@ function createDockerComposeYml() {
     inputEnv "Enter MYSQL_PASSWORD: " MYSQL_PASSWORD 1
     inputEnv "Enter MYSQL_DATABASE(e.g. nextcloud): " MYSQL_DATABASE
     inputEnv "Enter MYSQL_USER(e.g. nextcloud): " MYSQL_USER
-    inputEnv "Enter MYSQL_HOST(e.g. nextcloud): " MYSQL_HOST
     inputEnv "Enter PORT(e.g. 8080): " PORT
 
     mkdir -p ${DATA_DIR}/ncdocker
@@ -166,7 +165,7 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_HOST=db
 EOF
 }
 
