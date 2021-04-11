@@ -198,8 +198,7 @@ case ${1:-""} in
     "update")
         checkDataDirectory
         setComposeFile
-        docker-compose pull
-        echo "Now restart nextcloud."
+        docker-compose pull && echo "Now restart nextcloud."
         ;;
     "updateself")
         downloadSelf
