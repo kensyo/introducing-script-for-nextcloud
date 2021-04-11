@@ -67,7 +67,7 @@ EOT
 
 function downloadSelf() {
     if curl -s -w "http_code %{http_code}" -o ${SCRIPT_PATH}.temp ${GITHUB_BASE_URL}/nextcloud.sh | grep -q "^http_code 20[0-9]"; then
-        mv ${SCRPT_PATH}.temp ${SCRIPT_PATH}
+        mv ${SCRIPT_PATH}.temp ${SCRIPT_PATH}
         chmod u+x ${SCRIPT_PATH}
     else
         rm -f ${SCRIPT_PATH}.temp
