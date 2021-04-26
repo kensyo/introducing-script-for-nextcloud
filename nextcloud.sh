@@ -26,9 +26,12 @@ EOF
 
 declare -r SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 declare -r SCRIPT_NAME=$(basename "${0}")
-declare -r SCRIPT_PATH="${SCRIPT_DIR}/${SCRIPT_NAME}"
-declare -r DATA_DIR="${SCRIPT_DIR}/ncdata"
-declare -r YML=${DATA_DIR}/ncdocker/docker-compose.yml
+declare -r SCRIPT_PATH=${SCRIPT_DIR}/${SCRIPT_NAME}
+declare -r DATA_DIR=${SCRIPT_DIR}/ncdata
+declare -r DOCKER_DIR=${DATA_DIR}/ncdocker
+declare -r APP_DOCKER_FILE_DIR=${DOCKER_DIR}/app
+declare -r APP_DOCKER_FILE_PATH=${APP_DOCKER_FILE_DIR}/Dockerfile
+declare -r YML=${DOCKER_DIR}/docker-compose.yml
 
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master"
 
@@ -63,6 +66,7 @@ start
 stop
 restart
 update
+reinstall
 updateself
 help
 
@@ -126,6 +130,32 @@ function inputEnv() {
  
 }
 
+function createAppDockerfile() {
+    mkdir -p ${APP_DOCKER_FILE_DIR}
+
+cat <<-EOF > ${APP_DOCKER_FILE_PATH}
+FROM nextcloud
+
+# for thumbnails
+# references:
+# https://help.nextcloud.com/t/cant-see-pdf-thumbnails-in-new-grid-view-but-works-in-the-demo-instance/43759
+# https://help.nextcloud.com/t/pdf-previews-are-not-generated/51942
+RUN apt-get update
+RUN apt-get install -y ghostscript ffmpeg imagemagick
+RUN sed -i 's#<policy domain="coder" rights="none" pattern="PDF" />#<policy domain="coder" rights="read|write" pattern="PDF" />#' /etc/ImageMagick-6/policy.xml
+
+# for background jobs
+# references:
+# https://help.nextcloud.com/t/solved-occ-command-php-fatal-error-allowed-memory-size-of-xxx-bytes-exhausted/108521/29
+RUN sed -i 's#\*/5 \* \* \* \* php -f /var/www/html/cron.php#*/5 * * * * PHP_MEMORY_LIMIT=512M /usr/local/bin/php -f /var/www/html/cron.php#' /var/spool/cron/crontabs/www-data
+RUN apt-get install -y cron
+RUN crontab -u www-data /var/spool/cron/crontabs/www-data
+
+ENTRYPOINT sh -c "service cron start && /entrypoint.sh apache2-foreground"
+
+EOF
+}
+
 function createDockerComposeYml() {
 
     inputEnv "Enter MYSQL_ROOT_PASSWORD: " MYSQL_ROOT_PASSWORD 1
@@ -134,7 +164,7 @@ function createDockerComposeYml() {
     inputEnv "Enter MYSQL_USER(e.g. nextcloud): " MYSQL_USER
     inputEnv "Enter PORT(e.g. 8080): " PORT
 
-    mkdir -p ${DATA_DIR}/ncdocker
+    mkdir -p ${DOCKER_DIR}
 
 cat <<- EOF > ${YML}
 version: '2'
@@ -153,7 +183,7 @@ services:
       - MYSQL_USER=${MYSQL_USER}
 
   app:
-    image: nextcloud
+    build: ./$(basename ${APP_DOCKER_FILE_DIR})
     restart: always
     ports:
       - ${PORT}:80
@@ -177,7 +207,10 @@ case ${1:-""} in
             echo "${DATA_DIR} already exists."
             exit 1
         fi
+        createAppDockerfile
         createDockerComposeYml
+        setComposeFile
+        docker-compose pull && docker-compose build --pull
         ;;
     "start")
         checkDataDirectory
@@ -198,7 +231,29 @@ case ${1:-""} in
     "update")
         checkDataDirectory
         setComposeFile
-        docker-compose pull && echo "Now restart nextcloud."
+        docker-compose pull && docker-compose build --pull && echo "Now restart nextcloud."
+        ;;
+    "reinstall")
+        checkDataDirectory
+        if [ -d "${DOCKER_DIR}" ]; then
+            echo "Remove and recreate docker configurations?"
+            read -p "(This operation doesn't give any change to your stored data.) (y/n): " ans
+            if [ ! "${ans}" = 'y' ];then
+                exit 0
+            fi
+            rm -rf ${DOCKER_DIR}
+        else
+            echo "The docker directory not found."
+            read -p "Create it newly? (y/n): " ans
+            if [ ! "${ans}" = 'y' ];then
+                exit 0
+            fi
+        fi
+        # create
+        createAppDockerfile
+        createDockerComposeYml
+        setComposeFile
+        docker-compose pull && docker-compose build --pull
         ;;
     "updateself")
         downloadSelf
