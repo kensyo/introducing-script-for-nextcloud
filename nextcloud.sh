@@ -236,14 +236,14 @@ case ${1:-""} in
         if [ -d "${DOCKER_DIR}" ]; then
             echo "Remove and recreate docker configurations?"
             read -p "(This operation doesn't give any change to your stored data.) (y/n): " ans
-            if [ ! "${ans}" = 'y' ];then
+            if [ ! "${ans}" = 'y' ]; then
                 exit 0
             fi
             rm -rf ${DOCKER_DIR}
         else
             echo "The docker directory not found."
             read -p "Create it newly? (y/n): " ans
-            if [ ! "${ans}" = 'y' ];then
+            if [ ! "${ans}" = 'y' ]; then
                 exit 0
             fi
         fi
