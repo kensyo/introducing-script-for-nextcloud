@@ -209,8 +209,6 @@ case ${1:-""} in
         fi
         createAppDockerfile
         createDockerComposeYml
-        setComposeFile
-        docker-compose pull && docker-compose build --pull
         ;;
     "start")
         checkDataDirectory
@@ -252,8 +250,6 @@ case ${1:-""} in
         # create
         createAppDockerfile
         createDockerComposeYml
-        setComposeFile
-        docker-compose pull && docker-compose build --pull
         ;;
     "updateself")
         downloadSelf
