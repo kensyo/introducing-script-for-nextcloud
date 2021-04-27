@@ -35,7 +35,7 @@ declare -r YML=${DOCKER_DIR}/docker-compose.yml
 
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master"
 
-declare -r VERSION=v8
+declare -r VERSION=v9
 
 echo "SCRIPT VERSION: ${VERSION}"
 
@@ -87,7 +87,7 @@ function downloadSelf() {
 
 function checkDataDirectory() {
     if [ ! -d "${DATA_DIR}" ]; then
-        echo "The data directory does not exist. First install nextcloud."
+        echo "The data directory does not exist. First install nextcloud." 1>&2
         exit 1
     fi
 }
@@ -209,8 +209,6 @@ case ${1:-""} in
         fi
         createAppDockerfile
         createDockerComposeYml
-        setComposeFile
-        docker-compose pull && docker-compose build --pull
         ;;
     "start")
         checkDataDirectory
@@ -252,8 +250,6 @@ case ${1:-""} in
         # create
         createAppDockerfile
         createDockerComposeYml
-        setComposeFile
-        docker-compose pull && docker-compose build --pull
         ;;
     "updateself")
         downloadSelf
