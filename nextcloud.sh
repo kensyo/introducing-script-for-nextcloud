@@ -33,9 +33,9 @@ declare -r APP_DOCKER_FILE_DIR=${DOCKER_DIR}/app
 declare -r APP_DOCKER_FILE_PATH=${APP_DOCKER_FILE_DIR}/Dockerfile
 declare -r YML=${DOCKER_DIR}/docker-compose.yml
 
-declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master"
+declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/main"
 
-declare -r VERSION=v9
+declare -r VERSION=v10
 
 echo "SCRIPT VERSION: ${VERSION}"
 
@@ -236,14 +236,14 @@ case ${1:-""} in
         if [ -d "${DOCKER_DIR}" ]; then
             echo "Remove and recreate docker configurations?"
             read -p "(This operation doesn't give any change to your stored data.) (y/n): " ans
-            if [ ! "${ans}" = 'y' ];then
+            if [ ! "${ans}" = 'y' ]; then
                 exit 0
             fi
             rm -rf ${DOCKER_DIR}
         else
             echo "The docker directory not found."
             read -p "Create it newly? (y/n): " ans
-            if [ ! "${ans}" = 'y' ];then
+            if [ ! "${ans}" = 'y' ]; then
                 exit 0
             fi
         fi
