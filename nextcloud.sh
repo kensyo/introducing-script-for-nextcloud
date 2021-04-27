@@ -35,7 +35,7 @@ declare -r YML=${DOCKER_DIR}/docker-compose.yml
 
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/master"
 
-declare -r VERSION=v7
+declare -r VERSION=v8
 
 echo "SCRIPT VERSION: ${VERSION}"
 
