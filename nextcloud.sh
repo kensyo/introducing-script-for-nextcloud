@@ -87,7 +87,7 @@ function downloadSelf() {
 
 function checkDataDirectory() {
     if [ ! -d "${DATA_DIR}" ]; then
-        echo "The data directory does not exist. First install nextcloud."
+        echo "The data directory does not exist. First install nextcloud." 1>&2
         exit 1
     fi
 }
