@@ -1,0 +1,8 @@
+{
+  "name": "setup_nextcloud",
+  "version": "1.0.0",
+  "description": "Create config.yml, Dockerfile, docker-compose.yml for nextcloud hosting",
+  "main": "index.js",
+  "author": "kensyo",
+  "license": "MIT"
+}
