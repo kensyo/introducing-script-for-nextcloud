@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec node index.js
+exec node index.js $@

@@ -1,0 +1,19 @@
+# data directory path
+DATA_DIR: /ncdata
+
+# docker directory relative path from DATA_DIR
+DOCKER_DIR_RELATIVE_PATH: ncdocker
+
+# template opening delimiter
+TEMPLATE_DELIMITERS:
+  OPENING: "%%{"
+  CLOSING: "}%%"
+
+# config.yml default values
+CONFIG_YML_DEFAULT_VALUES:
+  MYSQL_ROOT_PASSWORD: nextcloud
+  MYSQL_DATABASE: nextcloud
+  MYSQL_PASSWORD: nextcloud
+  MYSQL_USER: nextcloud
+  PORT: 8080
+  CUSTOM_DOCKER_FILE_RELATIVE_PATH: ./custom/Dockerfile

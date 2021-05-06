@@ -1,0 +1,17 @@
+# MYSQL Root password
+MYSQL_ROOT_PASSWORD: %%{MYSQL_ROOT_PASSWORD}%%
+
+# MYSQL database name
+MYSQL_DATABASE: %%{MYSQL_DATABASE}%%
+
+# MYSQL password
+MYSQL_PASSWORD: %%{MYSQL_PASSWORD}%%
+
+# MYSQL user
+MYSQL_USER: %%{MYSQL_USER}%%
+
+# port number
+PORT: %%{PORT}%%
+
+# the relative path of a nextcloud custom docker file from ncdata/ncdocker directory
+# CUSTOM_DOCKER_FILE_RELATIVE_PATH: %%{CUSTOM_DOCKER_FILE_PATH}%%

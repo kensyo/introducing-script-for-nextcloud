@@ -3,5 +3,7 @@ version: '2'
 services:
   app:
     build: .
+    image: kensyo/ncsetup
     volumes:
         - ./app:/app
+        - ../ncdata:/ncdata

@@ -4,5 +4,8 @@
   "description": "Create config.yml, Dockerfile, docker-compose.yml for nextcloud hosting",
   "main": "index.js",
   "author": "kensyo",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
 }
