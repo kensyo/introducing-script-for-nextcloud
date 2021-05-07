@@ -12,6 +12,3 @@ MYSQL_USER: %%{MYSQL_USER}%%
 
 # port number
 PORT: %%{PORT}%%
-
-# the relative path of a nextcloud custom docker file from ncdata/ncdocker directory
-# CUSTOM_DOCKER_FILE_RELATIVE_PATH: %%{CUSTOM_DOCKER_FILE_PATH}%%

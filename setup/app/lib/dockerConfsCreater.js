@@ -14,19 +14,13 @@ function createDockerComposeYml() {
     const fs = require('fs');
 
     let IMAGE_OR_BUILD = null;
-    if (NC_CONFIG.hasOwnProperty('CUSTOM_DOCKER_FILE_RELATIVE_PATH')) {
-        const CUSTOM_DOCKER_FILE_RELATIVE_PATH = NC_CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
-        if (fs.existsSync(`${DOCKER_DIR}/${CUSTOM_DOCKER_FILE_RELATIVE_PATH}`)) {
-            const path = require('path');
-            IMAGE_OR_BUILD =
+    if (fs.existsSync(`${DOCKER_DIR}/CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']`)) {
+        IMAGE_OR_BUILD =
 `build:
       context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
       dockerfile: ${path.basename(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}`;
-        } else {
-            throw 'Custom Dockerfile not found.';
-        }
     } else {
-        IMAGE_OR_BUILD = 'build: nextcloud';
+        IMAGE_OR_BUILD = 'image: nextcloud';
     }
     const dcTemplate = fs.readFileSync('templates/docker-compose.yml.template', 'utf-8');
     const yml = util.template(
