@@ -12,9 +12,11 @@ function createDockerComposeYml() {
     const NC_CONFIG = util.loadYml(`${DATA_DIR}/config.yml`);
     const DOCKER_DIR = `${DATA_DIR}/${CONFIG['DOCKER_DIR_RELATIVE_PATH']}`;
     const fs = require('fs');
+    const CUSTOM_DOCKER_FILE_RELATIVE_PATH = CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
 
     let IMAGE_OR_BUILD = null;
-    if (fs.existsSync(`${DOCKER_DIR}/CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']`)) {
+    if (fs.existsSync(`${DOCKER_DIR}/${CUSTOM_DOCKER_FILE_RELATIVE_PATH}`)) {
+        const path = require('path');
         IMAGE_OR_BUILD =
 `build:
       context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
