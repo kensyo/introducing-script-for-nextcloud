@@ -37,11 +37,11 @@ function createDockerComposeYml() {
         IMAGE_OR_BUILD: IMAGE_OR_BUILD,
     };
     let templateToRead = null;
+    const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
     if (NC_CONFIG.hasOwnProperty('SSL')) {
         templateToRead = 'files/ssl-docker-compose.yml.template';
         replacementWords['VIRTUAL_HOST'] = NC_CONFIG['SSL']['VIRTUAL_HOST'];
         replacementWords['SSL_PORT'] = NC_CONFIG['SSL']['PORT'];
-        const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
         replacementWords['BUILD_PROXY'] =
 `build:
       context: ${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}
@@ -49,6 +49,9 @@ function createDockerComposeYml() {
         fs.copySync('files/proxy', `${DOCKER_DIR}/${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}`);
     } else {
         templateToRead = 'files/docker-compose.yml.template';
+
+        // No problem even if the file doesn't exist.
+        fs.removeSync(`${DOCKER_DIR}/${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}`);
     }
     const dcTemplate = fs.readFileSync(templateToRead, 'utf-8');
     const yml = util.template(
