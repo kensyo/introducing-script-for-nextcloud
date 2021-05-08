@@ -17,5 +17,3 @@ PORT: %%{PORT}%%
 # SSL:
 #   PORT: %%{SSL_PORT}%%
 #   VIRTUAL_HOST: "enter the FQDN"
-#   CERTIFICATE_PATH: "enter the path of the certificate(.crt etc)"
-#   PRIVATE_KEY_PATH: "enter the path of the private key"
