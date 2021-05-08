@@ -22,7 +22,11 @@ function createDockerComposeYml() {
       context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
       dockerfile: ${path.basename(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}`;
     } else {
-        IMAGE_OR_BUILD = 'image: nextcloud';
+        IMAGE_OR_BUILD =
+`# If you want to use a custom nextcloud docker image,
+    # create ${CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']} in the same directory as this file.
+    # Then run ./nextcloud rebuild.
+    image: nextcloud`;
     }
     let replacementWords = {
         MYSQL_ROOT_PASSWORD: NC_CONFIG['MYSQL_ROOT_PASSWORD'],
