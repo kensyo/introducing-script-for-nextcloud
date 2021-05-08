@@ -59,12 +59,8 @@ function createDockerComposeYml() {
         dcTemplate,
         replacementWords
     );
-    try {
-        fs.mkdirSync(DOCKER_DIR);
-    } catch (err) {
-        if (err.code !== "EEXIST") {
-            throw err;
-        }
-    }
+
+    fs.mkdirsSync(`${DATA_DIR}/${CONFIG['CERTS_DIR_RELATIVE_PATH']}`);
+    fs.mkdirsSync(DOCKER_DIR);
     fs.writeFileSync(`${DOCKER_DIR}/docker-compose.yml`, yml, 'utf8');
 }
