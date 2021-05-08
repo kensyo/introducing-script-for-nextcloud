@@ -8,7 +8,7 @@ module.exports = {
 
 // public
 function loadYml(filePath) {
-    const fs = require('fs');
+    const fs = require('fs-extra');
     const jsyml = require('js-yaml');
     const ymlText = fs.readFileSync(filePath, 'utf-8');
 

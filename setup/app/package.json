@@ -6,6 +6,7 @@
   "author": "kensyo",
   "license": "MIT",
   "dependencies": {
+    "fs-extra": "^10.0.0",
     "js-yaml": "^4.1.0"
   }
 }

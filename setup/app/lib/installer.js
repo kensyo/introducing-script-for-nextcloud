@@ -7,11 +7,11 @@ module.exports = {
 // public
 function install() {
     const util = require('./utility');
-    const fs = require('fs');
+    const fs = require('fs-extra');
     const CONFIG = util.loadConfig();
     const YML_DEFAULTS = CONFIG['CONFIG_YML_DEFAULT_VALUES'];
 
-    const template = fs.readFileSync('templates/config.yml.template', 'utf-8');
+    const template = fs.readFileSync('files/config.yml.template', 'utf-8');
     const yml = util.template(
         template,
         { 
@@ -19,7 +19,8 @@ function install() {
             MYSQL_DATABASE: YML_DEFAULTS['MYSQL_DATABASE'],
             MYSQL_PASSWORD: YML_DEFAULTS['MYSQL_PASSWORD'],
             MYSQL_USER: YML_DEFAULTS['MYSQL_USER'],
-            PORT: YML_DEFAULTS['PORT']
+            PORT: YML_DEFAULTS['PORT'],
+            SSL_PORT: YML_DEFAULTS['SSL_PORT']
         }
     );
 

@@ -9,14 +9,14 @@ function createDockerComposeYml() {
     const util = require('./utility');
     const CONFIG = util.loadConfig();
     const DATA_DIR = CONFIG['DATA_DIR'];
-    const NC_CONFIG = util.loadYml(`${DATA_DIR}/config.yml`);
+    const NC_CONFIG = util.loadYml(`${DATA_DIR}/config.yml`); // TODO: validation
     const DOCKER_DIR = `${DATA_DIR}/${CONFIG['DOCKER_DIR_RELATIVE_PATH']}`;
-    const fs = require('fs');
+    const fs = require('fs-extra');
     const CUSTOM_DOCKER_FILE_RELATIVE_PATH = CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
+    const path = require('path');
 
     let IMAGE_OR_BUILD = null;
     if (fs.existsSync(`${DOCKER_DIR}/${CUSTOM_DOCKER_FILE_RELATIVE_PATH}`)) {
-        const path = require('path');
         IMAGE_OR_BUILD =
 `build:
       context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
@@ -24,17 +24,32 @@ function createDockerComposeYml() {
     } else {
         IMAGE_OR_BUILD = 'image: nextcloud';
     }
-    const dcTemplate = fs.readFileSync('templates/docker-compose.yml.template', 'utf-8');
+    let replacementWords = {
+        MYSQL_ROOT_PASSWORD: NC_CONFIG['MYSQL_ROOT_PASSWORD'],
+        MYSQL_DATABASE: NC_CONFIG['MYSQL_DATABASE'],
+        MYSQL_PASSWORD: NC_CONFIG['MYSQL_PASSWORD'],
+        MYSQL_USER: NC_CONFIG['MYSQL_USER'],
+        PORT: NC_CONFIG['PORT'],
+        IMAGE_OR_BUILD: IMAGE_OR_BUILD,
+    };
+    let templateToRead = null;
+    if (NC_CONFIG.hasOwnProperty('SSL')) {
+        templateToRead = 'files/ssl-docker-compose.yml.template';
+        replacementWords['VIRTUAL_HOST'] = NC_CONFIG['SSL']['VIRTUAL_HOST'];
+        replacementWords['SSL_PORT'] = NC_CONFIG['SSL']['PORT'];
+        const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
+        replacementWords['BUILD_PROXY'] =
+`build:
+      context: ${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}
+      dockerfile: ${path.basename(PROXY_DOCKER_FILE_RELATIVE_PATH)}`;
+        fs.copySync('files/proxy', `${DOCKER_DIR}/${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}`);
+    } else {
+        templateToRead = 'files/docker-compose.yml.template';
+    }
+    const dcTemplate = fs.readFileSync(templateToRead, 'utf-8');
     const yml = util.template(
         dcTemplate,
-        { 
-            MYSQL_ROOT_PASSWORD: NC_CONFIG['MYSQL_ROOT_PASSWORD'],
-            MYSQL_DATABASE: NC_CONFIG['MYSQL_DATABASE'],
-            MYSQL_PASSWORD: NC_CONFIG['MYSQL_PASSWORD'],
-            MYSQL_USER: NC_CONFIG['MYSQL_USER'],
-            PORT: NC_CONFIG['PORT'],
-            IMAGE_OR_BUILD: IMAGE_OR_BUILD
-        }
+        replacementWords
     );
     try {
         fs.mkdirSync(DOCKER_DIR);

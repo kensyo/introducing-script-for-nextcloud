@@ -1,0 +1,46 @@
+version: '2'
+
+services:
+  db:
+    image: mariadb
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    volumes:
+      - ../db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=%%{MYSQL_ROOT_PASSWORD}%%
+      - MYSQL_PASSWORD=%%{MYSQL_PASSWORD}%%
+      - MYSQL_DATABASE=%%{MYSQL_DATABASE}%%
+      - MYSQL_USER=%%{MYSQL_USER}%%
+
+  app:
+    %%{IMAGE_OR_BUILD}%%
+    restart: always
+    links:
+      - db
+    volumes:
+      - ../web:/var/www/html
+    environment:
+      - VIRTUAL_HOST=%%{VIRTUAL_HOST}%%
+      - MYSQL_PASSWORD=%%{MYSQL_PASSWORD}%%
+      - MYSQL_DATABASE=%%{MYSQL_DATABASE}%%
+      - MYSQL_USER=%%{MYSQL_USER}%%
+      - MYSQL_HOST=db
+    networks:
+      - proxy-tier
+      - default
+
+  proxy:
+    %%{BUILD_PROXY}%%
+    restart: always
+    ports:
+      - %%{PORT}%%:80
+      - %%{SSL_PORT}%%:443
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxy-tier
+
+networks:
+  proxy-tier:
+

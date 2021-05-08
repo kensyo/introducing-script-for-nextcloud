@@ -1,0 +1,21 @@
+## MYSQL Root password
+MYSQL_ROOT_PASSWORD: %%{MYSQL_ROOT_PASSWORD}%%
+
+## MYSQL database name
+MYSQL_DATABASE: %%{MYSQL_DATABASE}%%
+
+## MYSQL password
+MYSQL_PASSWORD: %%{MYSQL_PASSWORD}%%
+
+## MYSQL user
+MYSQL_USER: %%{MYSQL_USER}%%
+
+## port number
+PORT: %%{PORT}%%
+
+## ssl settings
+# SSL:
+#   PORT: %%{SSL_PORT}%%
+#   VIRTUAL_HOST: "enter the FQDN"
+#   CERTIFICATE_PATH: "enter the path of the certificate(.crt etc)"
+#   PRIVATE_KEY_PATH: "enter the path of the private key"
