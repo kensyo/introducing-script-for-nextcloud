@@ -42,6 +42,7 @@ function createDockerComposeYml() {
         templateToRead = 'files/ssl-docker-compose.yml.template';
         replacementWords['VIRTUAL_HOST'] = NC_CONFIG['SSL']['VIRTUAL_HOST'];
         replacementWords['SSL_PORT'] = NC_CONFIG['SSL']['PORT'];
+        replacementWords['CERTS_DIR'] = CONFIG['CERTS_DIR_RELATIVE_PATH'];
         replacementWords['BUILD_PROXY'] =
 `build:
       context: ${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}
