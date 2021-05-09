@@ -1,7 +1,7 @@
 'use strict'
 
 module.exports = {
-    createDockerComposeYml
+    createDockerComposeYml,
 };
 
 const fs = require('fs-extra');
@@ -11,10 +11,11 @@ const util = require('./utility');
 const CONFIG = util.loadConfig();
 const DATA_DIR = CONFIG['DATA_DIR'];
 const DOCKER_DIR = `${DATA_DIR}/${CONFIG['DOCKER_DIR_RELATIVE_PATH']}`;
+const NC_CONFIG = util.loadYml(`${DATA_DIR}/config.yml`); // TODO: validation
 
 // public
 function createDockerComposeYml() {
-    const NC_CONFIG = util.loadYml(`${DATA_DIR}/config.yml`); // TODO: validation
+    tidyConfig();
 
     const replacementWords = {
         MYSQL_ROOT_PASSWORD: NC_CONFIG['MYSQL_ROOT_PASSWORD'],
@@ -27,7 +28,7 @@ function createDockerComposeYml() {
 
     let templateToRead = null;
     const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
-    if (NC_CONFIG.hasOwnProperty('SSL')) {
+    if (NC_CONFIG['SSL']['VIRTUAL_HOST']) {
         templateToRead = 'files/ssl-docker-compose.yml.template';
         replacementWords['VIRTUAL_HOST'] = NC_CONFIG['SSL']['VIRTUAL_HOST'];
         replacementWords['SSL_PORT'] = NC_CONFIG['SSL']['PORT'];
@@ -54,6 +55,7 @@ function createDockerComposeYml() {
     fs.writeFileSync(`${DOCKER_DIR}/docker-compose.yml`, yml, 'utf8');
 }
 
+// private
 function getImageOrBuild() {
     const CUSTOM_DOCKER_FILE_RELATIVE_PATH = CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
 
@@ -66,5 +68,54 @@ function getImageOrBuild() {
     # create ${CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']} in the same directory as this file.
     # Then run ./nextcloud rebuild.
     image: nextcloud`;
+    }
+}
+
+function tidyConfig() {
+    const jsyml = require('js-yaml');
+
+    const ncConfigTemplate = fs.readFileSync('files/config.yml.template', 'utf-8');
+    const defaultNcConfigAsString = util.template(
+        ncConfigTemplate,
+        CONFIG['CONFIG_YML_DEFAULT_VALUES']
+    );
+    const defaultNcConfigAsObject = jsyml.load(defaultNcConfigAsString);
+    checkDifferences(NC_CONFIG, defaultNcConfigAsObject);
+    const newNcConfigAsObject = {...defaultNcConfigAsObject, ...NC_CONFIG};
+
+    const newNcConfigAsText = util.template(
+        ncConfigTemplate,
+        {
+              MYSQL_ROOT_PASSWORD: newNcConfigAsObject['MYSQL_ROOT_PASSWORD'],
+              MYSQL_DATABASE: newNcConfigAsObject['MYSQL_DATABASE'],
+              MYSQL_PASSWORD: newNcConfigAsObject['MYSQL_ROOT_PASSWORD'],
+              MYSQL_USER: newNcConfigAsObject['MYSQL_USER'],
+              PORT: newNcConfigAsObject['PORT'],
+              VIRTUAL_HOST: `'${newNcConfigAsObject['SSL']['VIRTUAL_HOST']}'`,
+              SSL_PORT: newNcConfigAsObject['SSL']['PORT']
+        }
+    );
+
+    fs.writeFileSync(`${DATA_DIR}/config.yml`, newNcConfigAsText, 'utf8');
+
+}
+
+function checkDifferences(currentConfig, defaultConfig) {
+
+    for (let key of Object.keys(currentConfig)) {
+        if (!defaultConfig.hasOwnProperty(key)) {
+            throw `${key} in config.yml is an invalid config item.`;
+        }
+        const currentConfigItemValue = currentConfig[key];
+        const defaultConfigItemValue = defaultConfig[key];
+        const currentConfigItemClass = util.classOf(currentConfigItemValue);
+        const defaultConfigItemClass = util.classOf(defaultConfigItemValue);
+
+        if (currentConfigItemClass !== defaultConfigItemClass) {
+            throw `The value of ${key} in config.yml is invalid.`;
+        }
+        if (currentConfigItemClass === 'Object') {
+            checkDifferences(currentConfigItemValue, defaultConfigItemValue);
+        }
     }
 }
