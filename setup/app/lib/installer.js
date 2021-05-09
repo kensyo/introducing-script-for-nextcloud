@@ -14,14 +14,7 @@ function install() {
     const template = fs.readFileSync('files/config.yml.template', 'utf-8');
     const yml = util.template(
         template,
-        { 
-            MYSQL_ROOT_PASSWORD: YML_DEFAULTS['MYSQL_ROOT_PASSWORD'],
-            MYSQL_DATABASE: YML_DEFAULTS['MYSQL_DATABASE'],
-            MYSQL_PASSWORD: YML_DEFAULTS['MYSQL_PASSWORD'],
-            MYSQL_USER: YML_DEFAULTS['MYSQL_USER'],
-            PORT: YML_DEFAULTS['PORT'],
-            SSL_PORT: YML_DEFAULTS['SSL_PORT']
-        }
+        YML_DEFAULTS
     );
 
     const NC_CONFIG_PATH = `${CONFIG['DATA_DIR']}/config.yml`;

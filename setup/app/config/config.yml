@@ -9,8 +9,8 @@ DOCKER_DIR_RELATIVE_PATH: ncdocker
 
 # template opening delimiter
 TEMPLATE_DELIMITERS:
-  OPENING: "%%{"
-  CLOSING: "}%%"
+  OPENING: '%%{'
+  CLOSING: '}%%'
 
 # config.yml default values
 CONFIG_YML_DEFAULT_VALUES:
@@ -19,7 +19,8 @@ CONFIG_YML_DEFAULT_VALUES:
   MYSQL_PASSWORD: nextcloud
   MYSQL_USER: nextcloud
   PORT: 8080
-  SSL_PORT: 44300
+  VIRTUAL_HOST: '""' # empty string
+  SSL_PORT: 8443
 
 # the relative path of a nextcloud custom docker file from /ncdata/ncdocker directory
 CUSTOM_DOCKER_FILE_RELATIVE_PATH: app/Dockerfile

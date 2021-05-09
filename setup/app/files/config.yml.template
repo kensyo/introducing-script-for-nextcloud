@@ -14,6 +14,7 @@ MYSQL_USER: %%{MYSQL_USER}%%
 PORT: %%{PORT}%%
 
 ## ssl settings
-# SSL:
-#   PORT: %%{SSL_PORT}%%
-#   VIRTUAL_HOST: "enter the FQDN"
+SSL:
+  # If SSL_VIRTUAL_HOST is empty, use http not https
+  VIRTUAL_HOST: %%{VIRTUAL_HOST}%%
+  PORT: %%{SSL_PORT}%%
