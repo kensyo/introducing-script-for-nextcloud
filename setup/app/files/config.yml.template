@@ -10,11 +10,17 @@ MYSQL_PASSWORD: %%{MYSQL_PASSWORD}%%
 ## MYSQL user
 MYSQL_USER: %%{MYSQL_USER}%%
 
-## port number
+## port number for http
 PORT: %%{PORT}%%
 
-## ssl settings
-SSL:
-  # If SSL_VIRTUAL_HOST is empty, use http not https
-  VIRTUAL_HOST: %%{VIRTUAL_HOST}%%
-  PORT: %%{SSL_PORT}%%
+## If this is true, use https not http. If this is false,
+## the following two items below are ignored.
+SSL: %%{SSL}%%
+
+## Access url when https mode. If SSL is true, you must designate
+## this item, and accordingly put certs and key files with the name,
+## [SSL_VIRTUAL_HOST].{crt, key}, in ./certs directory.
+SSL_VIRTUAL_HOST: %%{SSL_VIRTUAL_HOST}%%
+
+## port number for https
+SSL_PORT: %%{SSL_PORT}%%

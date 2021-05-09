@@ -28,10 +28,10 @@ function createDockerComposeYml() {
 
     let templateToRead = null;
     const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
-    if (NC_CONFIG['SSL']['VIRTUAL_HOST']) {
+    if (NC_CONFIG['SSL']) {
         templateToRead = 'files/ssl-docker-compose.yml.template';
-        replacementWords['VIRTUAL_HOST'] = NC_CONFIG['SSL']['VIRTUAL_HOST'];
-        replacementWords['SSL_PORT'] = NC_CONFIG['SSL']['PORT'];
+        replacementWords['VIRTUAL_HOST'] = NC_CONFIG['SSL_VIRTUAL_HOST'];
+        replacementWords['SSL_PORT'] = NC_CONFIG['SSL_PORT'];
         replacementWords['CERTS_DIR'] = CONFIG['CERTS_DIR_RELATIVE_PATH'];
         replacementWords['BUILD_PROXY'] =
 `build:
@@ -85,15 +85,7 @@ function tidyConfig() {
 
     const newNcConfigAsText = util.template(
         ncConfigTemplate,
-        {
-              MYSQL_ROOT_PASSWORD: newNcConfigAsObject['MYSQL_ROOT_PASSWORD'],
-              MYSQL_DATABASE: newNcConfigAsObject['MYSQL_DATABASE'],
-              MYSQL_PASSWORD: newNcConfigAsObject['MYSQL_ROOT_PASSWORD'],
-              MYSQL_USER: newNcConfigAsObject['MYSQL_USER'],
-              PORT: newNcConfigAsObject['PORT'],
-              VIRTUAL_HOST: `'${newNcConfigAsObject['SSL']['VIRTUAL_HOST']}'`,
-              SSL_PORT: newNcConfigAsObject['SSL']['PORT']
-        }
+        newNcConfigAsObject
     );
 
     fs.writeFileSync(`${DATA_DIR}/config.yml`, newNcConfigAsText, 'utf8');
