@@ -4,38 +4,27 @@ module.exports = {
     createDockerComposeYml
 };
 
+const fs = require('fs-extra');
+const path = require('path');
+const util = require('./utility');
+
+const CONFIG = util.loadConfig();
+const DATA_DIR = CONFIG['DATA_DIR'];
+const DOCKER_DIR = `${DATA_DIR}/${CONFIG['DOCKER_DIR_RELATIVE_PATH']}`;
+
 // public
 function createDockerComposeYml() {
-    const util = require('./utility');
-    const CONFIG = util.loadConfig();
-    const DATA_DIR = CONFIG['DATA_DIR'];
     const NC_CONFIG = util.loadYml(`${DATA_DIR}/config.yml`); // TODO: validation
-    const DOCKER_DIR = `${DATA_DIR}/${CONFIG['DOCKER_DIR_RELATIVE_PATH']}`;
-    const fs = require('fs-extra');
-    const CUSTOM_DOCKER_FILE_RELATIVE_PATH = CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
-    const path = require('path');
 
-    let IMAGE_OR_BUILD = null;
-    if (fs.existsSync(`${DOCKER_DIR}/${CUSTOM_DOCKER_FILE_RELATIVE_PATH}`)) {
-        IMAGE_OR_BUILD =
-`build:
-      context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
-      dockerfile: ${path.basename(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}`;
-    } else {
-        IMAGE_OR_BUILD =
-`# If you want to use a custom nextcloud docker image,
-    # create ${CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']} in the same directory as this file.
-    # Then run ./nextcloud rebuild.
-    image: nextcloud`;
-    }
-    let replacementWords = {
+    const replacementWords = {
         MYSQL_ROOT_PASSWORD: NC_CONFIG['MYSQL_ROOT_PASSWORD'],
         MYSQL_DATABASE: NC_CONFIG['MYSQL_DATABASE'],
         MYSQL_PASSWORD: NC_CONFIG['MYSQL_PASSWORD'],
         MYSQL_USER: NC_CONFIG['MYSQL_USER'],
         PORT: NC_CONFIG['PORT'],
-        IMAGE_OR_BUILD: IMAGE_OR_BUILD,
+        IMAGE_OR_BUILD: getImageOrBuild(),
     };
+
     let templateToRead = null;
     const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
     if (NC_CONFIG.hasOwnProperty('SSL')) {
@@ -63,4 +52,19 @@ function createDockerComposeYml() {
     fs.mkdirsSync(`${DATA_DIR}/${CONFIG['CERTS_DIR_RELATIVE_PATH']}`);
     fs.mkdirsSync(DOCKER_DIR);
     fs.writeFileSync(`${DOCKER_DIR}/docker-compose.yml`, yml, 'utf8');
+}
+
+function getImageOrBuild() {
+    const CUSTOM_DOCKER_FILE_RELATIVE_PATH = CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
+
+    if (fs.existsSync(`${DOCKER_DIR}/${CUSTOM_DOCKER_FILE_RELATIVE_PATH}`)) {
+        return `build:
+      context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
+      dockerfile: ${path.basename(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}`;
+    } else {
+        return `# If you want to use a custom nextcloud docker image,
+    # create ${CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']} in the same directory as this file.
+    # Then run ./nextcloud rebuild.
+    image: nextcloud`;
+    }
 }
