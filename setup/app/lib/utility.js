@@ -3,7 +3,8 @@
 module.exports = {
     loadYml,
     loadConfig,
-    template
+    template,
+    classOf
 };
 
 // public
@@ -41,6 +42,10 @@ function template(string, values, opening, closing) {
     return string.replace(new RegExp(opening + "(.*?)" + closing, "g"), function(all, key){
         return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : "";
     });
+}
+
+function classOf(o) {
+    return Object.prototype.toString.call(o).slice(8, -1);
 }
 
 // private
