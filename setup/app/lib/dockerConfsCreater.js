@@ -96,7 +96,7 @@ function checkDifferences(currentConfig, defaultConfig) {
 
     for (let key of Object.keys(currentConfig)) {
         if (!defaultConfig.hasOwnProperty(key)) {
-            throw `${key} in config.yml is an invalid config item.`;
+            throw new Error(`${key} in config.yml is an invalid config item.`);
         }
         const currentConfigItemValue = currentConfig[key];
         const defaultConfigItemValue = defaultConfig[key];
@@ -104,7 +104,7 @@ function checkDifferences(currentConfig, defaultConfig) {
         const defaultConfigItemClass = util.classOf(defaultConfigItemValue);
 
         if (currentConfigItemClass !== defaultConfigItemClass) {
-            throw `The value of ${key} in config.yml is invalid.`;
+            throw new Error(`The value of ${key} in config.yml is invalid.`);
         }
         if (currentConfigItemClass === 'Object') {
             checkDifferences(currentConfigItemValue, defaultConfigItemValue);

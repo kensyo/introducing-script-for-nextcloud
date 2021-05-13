@@ -13,7 +13,7 @@ function route(operation) {
         const updater = require('./updater');
         updater.update();
     } else {
-        throw 'An invalid operation is specified.';
+        throw new Error('An invalid operation is specified.');
     }
 }
 

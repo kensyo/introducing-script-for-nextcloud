@@ -19,7 +19,6 @@ function loadYml(filePath) {
 /**
  * loadConfig.
  *
- * @param {String} configPath
  * @return {Object}
  */
 function loadConfig() {
