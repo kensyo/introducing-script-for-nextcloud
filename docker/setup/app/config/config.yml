@@ -42,8 +42,8 @@ CONFIG_YML_DEFAULT_PARAMETERS:
     DESC: 'If this is true, use Redis. Redis is used to prevent race confitions.'
 
   CONFIG_PHP:
-    # DEFAULT_VALUE is null
-    DEFAULT_VALUE:
+    # {} means an empty object
+    DEFAULT_VALUE: {}
     DESC: |
       Config values of nextcloud itself. If specified,
       overwrite the contents of web/config/config.php.
