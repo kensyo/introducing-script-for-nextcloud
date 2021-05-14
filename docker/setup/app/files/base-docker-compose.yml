@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  db:
+    image: mariadb
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    volumes:
+      - ../db:/var/lib/mysql
+
+  app:
+    restart: always
+    depends_on:
+      - db
+    volumes:
+      - ../web:/var/www/html
+    environment:
+      - MYSQL_HOST=db

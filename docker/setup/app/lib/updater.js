@@ -14,6 +14,7 @@ const PARAMETERS = CONFIG['CONFIG_YML_DEFAULT_PARAMETERS'];
 const DATA_DIR = CONFIG['DATA_DIR'];
 const DOCKER_DIR = `${DATA_DIR}/${CONFIG['DOCKER_DIR_RELATIVE_PATH']}`;
 const CONFIG_YML_PATH = `${DATA_DIR}/config.yml`;
+const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
 
 const INDENTATION_WIDTH = 2;
 
@@ -25,7 +26,9 @@ function update() {
         tidyConfigYml();
     }
 
-    createDockerComposeYml();
+    const NC_CONFIG = util.loadYml(CONFIG_YML_PATH);
+    createDockerComposeYml(NC_CONFIG);
+    prepare(NC_CONFIG);
 }
 
 // private
@@ -264,75 +267,101 @@ function checkDifferences(currentConfig, defaultConfig) {
     }
 }
 
-function createDockerComposeYml() {
-    const NC_CONFIG = util.loadYml(CONFIG_YML_PATH);
-    const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
+function createDockerComposeYml(ncConfig) {
+    const base = util.loadYml('files/base-docker-compose.yml');
 
-    const replacementWords = {
-        IMAGE_OR_BUILD: getImageOrBuild(),
-    };
+    setImageOrBuild(base);
+    setSslOrNot(base, ncConfig);
+    setRedisOrNot(base, ncConfig);
 
-    const SSL_CONFIG = NC_CONFIG['SSL'];
-
-    if (SSL_CONFIG['ENABLE']) {
-        replacementWords['ENVIRONMENT_VIRTUAL_HOST'] =
-            `- VIRTUAL_HOST=${SSL_CONFIG['VIRTUAL_HOST']}`;
-        replacementWords['NETWORKS_PROXY'] = '- proxy-tier';
-        replacementWords['SERVICE_PROXY'] =
-`proxy:
-    build:
-      context: ${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}
-      dockerfile: ${path.basename(PROXY_DOCKER_FILE_RELATIVE_PATH)}
-    restart: always
-    ports:
-      - ${NC_CONFIG['PORT']}:80
-      - ${SSL_CONFIG['PORT']}:443
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ../${CONFIG['CERTS_DIR_RELATIVE_PATH']}:/etc/nginx/certs
-    networks:
-      - proxy-tier`;
-
-        replacementWords['NETWORKS'] = 
-`networks:
-  proxy-tier:`;
-    } else {
-        replacementWords['PORTS'] =
-`ports:
-      - ${NC_CONFIG['PORT']}:80`;
-    }
-
-    if (NC_CONFIG['REDIS']) {
-        replacementWords['DEPENDS_ON_REDIS'] = '- redis';
-        replacementWords['ENVIRONMENT_REDIS_HOST'] = '- REDIS_HOST=redis';
-        replacementWords['SERVICE_REDIS'] =
-`redis:
-    image: redis:alpine
-    restart: always`;
-    }
-
-    const dcTemplate = fs.readFileSync('files/docker-compose.yml.template', 'utf-8');
-    const yml = util.template(
-        dcTemplate,
-        replacementWords
-    );
-
-    fs.mkdirsSync(`${DATA_DIR}/${CONFIG['CERTS_DIR_RELATIVE_PATH']}`);
+    // make sure to create docker dir, though docker dir should be created at installation.
     fs.mkdirsSync(DOCKER_DIR);
-    fs.writeFileSync(`${DOCKER_DIR}/docker-compose.yml`, yml, 'utf8');
+    fs.writeFileSync(`${DOCKER_DIR}/docker-compose.yml`, jsyml.dump(base), 'utf8');
 }
 
-function getImageOrBuild() {
+function setImageOrBuild(base) {
     const CUSTOM_DOCKER_FILE_RELATIVE_PATH = CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
 
     if (fs.existsSync(`${DOCKER_DIR}/${CUSTOM_DOCKER_FILE_RELATIVE_PATH}`)) {
-        return `build:
-      context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
-      dockerfile: ${path.basename(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}`;
+        base['services']['app']['build'] = {
+            'context': path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH),
+            'dockerfile': path.basename(CUSTOM_DOCKER_FILE_RELATIVE_PATH)
+        }
     } else {
-        return `# If you want to use a custom nextcloud docker image,
-    # create ${CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']} in the same directory as this file.
-    # Then run ./nextcloud rebuild.
-    image: nextcloud`;
+        base['services']['app']['image'] = 'nextcloud';
     }
+}
+
+function setSslOrNot(base, ncConfig) {
+    const SSL_CONFIG = ncConfig['SSL'];
+
+    const PORT = ncConfig['PORT'];
+
+    if (SSL_CONFIG['ENABLE']) {
+
+        // app service configuration
+        base['services']['app']['environment'].push(`VIRTUAL_HOST=${SSL_CONFIG['VIRTUAL_HOST']}`);
+
+        const PROXY_NETWORK_NAME = 'proxy-tier';
+
+        base['services']['app']['networks'] = [
+            PROXY_NETWORK_NAME,
+            'default'
+        ];
+
+        // create proxy additional service
+        base['services']['proxy'] = {
+            'build': {
+                'context': `${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}`,
+                'dockerfile': `${path.basename(PROXY_DOCKER_FILE_RELATIVE_PATH)}`
+            },
+            'restart': 'always',
+            'ports': [
+                `${PORT}:80`,
+                `${ncConfig['SSL']['PORT']}:443`
+            ],
+            'volumes': [
+                '/var/run/docker.sock:/tmp/docker.sock:ro',
+                `../${CONFIG['CERTS_DIR_RELATIVE_PATH']}:/etc/nginx/certs`
+            ],
+            'networks': [
+                PROXY_NETWORK_NAME
+            ]
+        };
+
+        // networks
+        base['networks'] = {
+            'proxy-tier': null
+        };
+    } else {
+        base['services']['app']['ports'] = [
+            `${PORT}:80`
+        ];
+    }
+}
+
+function setRedisOrNot(base, ncConfig) {
+    if (ncConfig['REDIS']) {
+        const REDIS_SERVICE_NAME = 'redis';
+
+        // app services additional configuration
+        base['services']['app']['depends_on'].push(REDIS_SERVICE_NAME);
+        base['services']['app']['environment'].push(`REDIS_HOST=${REDIS_SERVICE_NAME}`);
+
+        // create redis service
+        base['services'][REDIS_SERVICE_NAME] = {
+            'image': 'redis:alpine',
+            'restart': 'always'
+        };
+    }
+}
+
+function prepare(ncConfig) {
+    const PROXY_DOCKER_FILE_PATH = `${DOCKER_DIR}/${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}`;
+    if (ncConfig['SSL']['ENABLE']) {
+        fs.copySync('files/proxy',PROXY_DOCKER_FILE_PATH);
+    } else {
+        fs.removeSync(PROXY_DOCKER_FILE_PATH);
+    }
+    // TODO: php コンテナを用意して、config.php の設定を変更する必要がある。
 }
