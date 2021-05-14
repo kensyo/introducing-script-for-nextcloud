@@ -23,14 +23,15 @@ services:
       - ../web:/var/www/html
     environment:
       - MYSQL_HOST=db
-      - REDIS_HOST=redis
+      %%{ENVIRONMENT_REDIS_HOST}%%
       %%{ENVIRONMENT_VIRTUAL_HOST}%%
     networks:
-      %%{NETWORKS_PROXY}%%
       - default
+      %%{NETWORKS_PROXY}%%
+    %%{PORTS}%%
 
-  %%{REDIS_SERVICE}%%
+  %%{SERVICE_REDIS}%%
 
-  %%{PROYX_SERVICE}%%
+  %%{SERVICE_PROXY}%%
 
 %%{NETWORKS}%%

@@ -5,11 +5,15 @@ module.exports = {
 };
 
 const util = require('./utility');
-const CONFIG = util.loadConfig();
-const PARAMETERS = CONFIG['CONFIG_YML_DEFAULT_PARAMETERS'];
-const CONFIG_YML_PATH = `${CONFIG['DATA_DIR']}/config.yml`;
 const fs = require('fs-extra');
 const jsyml = require('js-yaml');
+const path = require('path');
+
+const CONFIG = util.loadConfig();
+const PARAMETERS = CONFIG['CONFIG_YML_DEFAULT_PARAMETERS'];
+const DATA_DIR = CONFIG['DATA_DIR'];
+const DOCKER_DIR = `${DATA_DIR}/${CONFIG['DOCKER_DIR_RELATIVE_PATH']}`;
+const CONFIG_YML_PATH = `${DATA_DIR}/config.yml`;
 
 const INDENTATION_WIDTH = 2;
 
@@ -261,61 +265,74 @@ function checkDifferences(currentConfig, defaultConfig) {
 }
 
 function createDockerComposeYml() {
+    const NC_CONFIG = util.loadYml(CONFIG_YML_PATH);
+    const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'];
+
+    const replacementWords = {
+        IMAGE_OR_BUILD: getImageOrBuild(),
+    };
+
+    const SSL_CONFIG = NC_CONFIG['SSL'];
+
+    if (SSL_CONFIG['ENABLE']) {
+        replacementWords['ENVIRONMENT_VIRTUAL_HOST'] =
+            `- VIRTUAL_HOST=${SSL_CONFIG['VIRTUAL_HOST']}`;
+        replacementWords['NETWORKS_PROXY'] = '- proxy-tier';
+        replacementWords['SERVICE_PROXY'] =
+`proxy:
+    build:
+      context: ${path.dirname(PROXY_DOCKER_FILE_RELATIVE_PATH)}
+      dockerfile: ${path.basename(PROXY_DOCKER_FILE_RELATIVE_PATH)}
+    restart: always
+    ports:
+      - ${NC_CONFIG['PORT']}:80
+      - ${SSL_CONFIG['PORT']}:443
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ../${CONFIG['CERTS_DIR_RELATIVE_PATH']}:/etc/nginx/certs
+    networks:
+      - proxy-tier`;
+
+        replacementWords['NETWORKS'] = 
+`networks:
+  proxy-tier:`;
+    } else {
+        replacementWords['PORTS'] =
+`ports:
+      - ${NC_CONFIG['PORT']}:80`;
+    }
+
+    if (NC_CONFIG['REDIS']) {
+        replacementWords['DEPENDS_ON_REDIS'] = '- redis';
+        replacementWords['ENVIRONMENT_REDIS_HOST'] = '- REDIS_HOST=redis';
+        replacementWords['SERVICE_REDIS'] =
+`redis:
+    image: redis:alpine
+    restart: always`;
+    }
+
+    const dcTemplate = fs.readFileSync('files/docker-compose.yml.template', 'utf-8');
+    const yml = util.template(
+        dcTemplate,
+        replacementWords
+    );
+
+    fs.mkdirsSync(`${DATA_DIR}/${CONFIG['CERTS_DIR_RELATIVE_PATH']}`);
+    fs.mkdirsSync(DOCKER_DIR);
+    fs.writeFileSync(`${DOCKER_DIR}/docker-compose.yml`, yml, 'utf8');
 }
 
-// function createConfigYml() {
-//     const util = require('./utility');
-//     const CONFIG = util.loadConfig();
-//     const PARAMETERS = CONFIG['CONFIG_YML_DEFAULT_PARAMETERS'];
+function getImageOrBuild() {
+    const CUSTOM_DOCKER_FILE_RELATIVE_PATH = CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH'];
 
-//     console.log(getDefaultConfigYML('', PARAMETERS, 0));
-// }
-
-// function getDefaultConfigYML(resultText, parameters, depth) {
-//     if (parameters.length === 0) {
-//         return resultText;
-//     }
-//     for (const param of parameters) {
-//         if (!param.hasOwnProperty('NAME')) {
-//             throw new Error('NAME property is missing.');
-//         }
-
-//         if (param.hasOwnProperty('DEFAULT_VALUE') && param.hasOwnProperty('CHILDREN')) {
-//             throw new Error('DEFAULT_VALUE and CHILDREN must not be set together.');
-//         }
-
-//         if (param.hasOwnProperty('DESC')) {
-//             const descLines = param['DESC'].split('\n');
-//             for (let line of descLines) {
-//                 if (line === '') {
-//                     continue;
-//                 }
-//                 resultText = concatenateLine(resultText, '# ' + line, depth);
-//             }
-//         }
-
-//         if (param.hasOwnProperty('DEFAULT_VALUE')) {
-//             const line = param['NAME'] + ': ' + param['DEFAULT_VALUE'];
-//             resultText = concatenateLine(resultText, line, depth);
-//             resultText = concatenateLine(resultText, '', 0); // add an empty line
-//             continue;
-//         }
-
-//         if (param.hasOwnProperty('CHILDREN')) {
-//             const line = param['NAME'] + ':';
-//             resultText = concatenateLine(resultText, line, depth);
-//             resultText = getDefaultConfigYML(resultText, param['CHILDREN'], depth + 1);
-//         }
-//     }
-//     return resultText;
-// }
-
-// function concatenateLine(srcStr, line, depth) {
-//     const INDENTATION_WIDTH = 2;
-//     let space = '';
-//     for (let i = 0; i < depth * INDENTATION_WIDTH; ++i) {
-//         space += ' ';
-//     }
-
-//     return srcStr + '\n' + space + line;
-// }
+    if (fs.existsSync(`${DOCKER_DIR}/${CUSTOM_DOCKER_FILE_RELATIVE_PATH}`)) {
+        return `build:
+      context: ${path.dirname(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}
+      dockerfile: ${path.basename(CUSTOM_DOCKER_FILE_RELATIVE_PATH)}`;
+    } else {
+        return `# If you want to use a custom nextcloud docker image,
+    # create ${CONFIG['CUSTOM_DOCKER_FILE_RELATIVE_PATH']} in the same directory as this file.
+    # Then run ./nextcloud rebuild.
+    image: nextcloud`;
+    }
+}
