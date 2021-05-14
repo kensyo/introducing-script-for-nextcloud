@@ -1,0 +1,3 @@
+[submodule "docker/configure/app/lib/spyc"]
+	path = docker/configure/app/lib/spyc
+	url = https://github.com/mustangostang/spyc.git
