@@ -13,4 +13,4 @@ services:
     image: kensyo/ncconfigure
     volumes:
       - ./configure/app:/usr/src/app
-      - ../ncdata/ncdata
+      - ../ncdata:/ncdata
