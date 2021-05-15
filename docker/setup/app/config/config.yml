@@ -28,6 +28,11 @@ CONFIG_YML_DEFAULT_PARAMETERS:
           If true, use https mode, and you must accordingly
           put cert and key files with the name,
           [VIRTUAL_HOST].{crt, key}, in ./certs directory.
+          In addition, add like
+            CONFIG_PHP:
+              trusted_domains:
+                - **your virtual host**
+          to CONFIG_PHP below.
 
       VIRTUAL_HOST:
         DEFAULT_VALUE: 'Enter FQDN'
