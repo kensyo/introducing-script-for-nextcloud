@@ -366,4 +366,7 @@ function prepare(ncConfig) {
     } else {
         fs.removeSync(PROXY_DOCKER_FILE_PATH);
     }
+
+    // create certs dir
+    fs.mkdirsSync(`${DATA_DIR}/${CONFIG['CERTS_DIR_RELATIVE_PATH']}`);
 }
