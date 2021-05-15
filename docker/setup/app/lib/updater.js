@@ -248,6 +248,9 @@ function checkDifferences(currentConfig, defaultConfig) {
 
     for (const key of Object.keys(currentConfig)) {
         if (key === 'CONFIG_PHP') {
+            if (util.classOf(currentConfig[key]) !== 'Object') {
+                throw new Error(`${key} in config.yml is invalid.`);
+            }
             continue;
         }
         if (!defaultConfig.hasOwnProperty(key)) {
