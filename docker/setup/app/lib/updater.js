@@ -366,5 +366,4 @@ function prepare(ncConfig) {
     } else {
         fs.removeSync(PROXY_DOCKER_FILE_PATH);
     }
-    // TODO: php コンテナを用意して、config.php の設定を変更する必要がある。
 }
