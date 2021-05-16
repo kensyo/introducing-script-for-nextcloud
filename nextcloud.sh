@@ -95,7 +95,7 @@ function checkDataDirectory() {
     fi
 }
 
-function buildSetupDockerImage() {
+function buildDockerImages() {
     local -r PULL_FLAG=${1:-"withpull"}
 
     local -r SETUP_DOCKER_DIR=$(mktemp -d)
@@ -103,7 +103,7 @@ function buildSetupDockerImage() {
 
     curl -L ${TAR_BALL_URL} | tar xvz -C ${SETUP_DOCKER_DIR}
 
-    export COMPOSE_FILE=${SETUP_DOCKER_DIR}/${REPOSITORY_NAME}-${REPOSITORY_BRANCH}/setup/docker-compose.yml
+    export COMPOSE_FILE=${SETUP_DOCKER_DIR}/${REPOSITORY_NAME}-${REPOSITORY_BRANCH}/docker/docker-compose.yml
 
     if [ "${PULL_FLAG}" = "withpull" ]; then
         docker-compose build --pull
@@ -137,17 +137,35 @@ function serveNCContainers() {
     export COMPOSE_FILE=""
 }
 
+function waitUntilInstalled() {
+    # TODO: 最大ループ回数は決めておいたほうが良い
+    echo "Waiting for nextcloud to be initialized..."
+    sleep 30
+    while :
+    do
+        if grep -q "'installed' => true" ${DATA_DIR}/web/config/config.php > /dev/null 2>&1; then
+            break
+        fi
+        sleep 5
+    done
+}
+
 # Commands
 
 case ${1:-""} in
     "install")
         if [ -e "${CONFIG_YML}" ]; then
             echo "Nextcloud has already been installed."
-            exit 1
+            exit 0
         fi
         mkdir -p ${DATA_DIR}
-        buildSetupDockerImage withpull
-        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup install
+        buildDockerImages withpull
+        docker run --rm -it -v ${DATA_DIR}:/ncdata kensyo/ncsetup install
+        serveNCContainers start
+        waitUntilInstalled
+        serveNCContainers stop
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure
         echo "Nextcloud successfully installed."
         echo 'Modify ncdata/config.yml and run `./nextcloud.sh rebuild` if you need, and then, run `./nextcloud start`'
         ;;
@@ -176,8 +194,9 @@ case ${1:-""} in
     "updateDockerConfs")
         checkDataDirectory
         serveNCContainers stop
-        buildSetupDockerImage withpull
+        buildDockerImages withpull
         docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure
         echo "Successfully updated docker configurations."
         echo "Now restart nextcloud."
         ;;
@@ -186,6 +205,7 @@ case ${1:-""} in
         serveNCContainers stop
         # buildSetupDockerImage nopull
         docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure
         echo "Successfully rebuilt."
         echo "Now restart nextcloud."
         ;;
