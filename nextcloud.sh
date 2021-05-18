@@ -71,6 +71,7 @@ update
 updateDockerConfs
 rebuild
 updateself
+changedbsetup
 help
 
 EOT
@@ -150,6 +151,92 @@ function waitUntilInstalled() {
     done
 }
 
+function inputEnv() {
+    local -r PROMPT_MESSAGE=${1}
+    local -r ENV_NAME=${2}
+    local -r IS_SECRET=${3:-0} # 0 is false and 1 is true
+    local -r CONFIRMATION=${4:-0} # 0 is false and 1 is true
+
+    while :
+    do
+        if [ "${IS_SECRET}" -eq 0 ]; then
+            read -p "${PROMPT_MESSAGE}" input
+        else
+            read -sp "${PROMPT_MESSAGE}" input
+            tty -s && echo "" # -s つけると改行がいるっぽい
+        fi
+
+        if [ -z "${input}" ]; then
+            echo "An empty value must not be set. Type again." 1>&2
+            continue
+        fi
+
+        if [ ! "${CONFIRMATION}" -eq 0 ]; then
+            read -sp "Input again for confirmation: " confirmationInput
+            tty -s && echo "" # -s つけると改行がいるっぽい
+            if [ "${input}" != "${confirmationInput}" ]; then
+                echo "Does not coincide. Type again." 1>&2
+                continue
+            fi
+        fi
+
+        eval ${ENV_NAME}=${input}
+        break
+    done
+
+}
+
+function changeDBSetup() {
+    local -ar OPTIONS=(
+        "MYSQL root password"
+        "MYSQL database name"
+        "MYSQL user name"
+        "MYSQL user password"
+    )
+
+    echo ""
+    for ((i = 0; i < ${#OPTIONS[@]}; i++)) {
+        echo "[$i]: ${OPTIONS[i]}"
+    }
+
+    local index=0
+    while :
+    do
+        inputEnv "Which do you change? [0..$(( ${#OPTIONS[@]} - 1 ))]: " index
+        if [ 0 -le ${index} -a ${index} -lt ${#OPTIONS[@]} ]; then
+            break
+        else
+            echo "Choose out of [0..$(( ${#OPTIONS[@]} - 1 ))]"
+        fi
+    done
+    echo ""
+
+    case ${OPTIONS[${index}]} in
+        "MYSQL root password")
+            local  currentPassword=""
+            local newPassword=""
+            inputEnv "Enter the current password: " currentPassword 1
+            inputEnv "Enter a new password: " newPassword 1 1
+
+            export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+            docker-compose up -d db
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"localhost\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql "
+            docker-compose down
+            export COMPOSE_FILE=""
+            ;;
+        "MYSQL database name")
+            ;;
+        "MYSQL user name")
+            ;;
+        "MYSQL user password")
+            ;;
+        *)
+            echo "Something wrong." 1>&2
+            exit 1
+            ;;
+    esac
+}
+
 # Commands
 
 case ${1:-""} in
@@ -208,6 +295,11 @@ case ${1:-""} in
         docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure
         echo "Successfully rebuilt."
         echo "Now restart nextcloud."
+        ;;
+    "changedbsetup")
+        checkDataDirectory
+        # serveNCContainers stop
+        changeDBSetup
         ;;
     "updateself")
         downloadSelf
