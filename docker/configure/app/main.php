@@ -1,19 +1,38 @@
 <?php
 
-require_once 'lib/spyc/Spyc.php';
+$operation = $argv[1];
 
-// $CONFIG is defined in config.php
-require_once '/ncdata/web/config/config.php';
+switch ($operation) {
+    case "configure":
+        // TODO: 関数化
+        require_once 'lib/spyc/Spyc.php';
+        // $CONFIG is defined in config.php
+        require_once '/ncdata/web/config/config.php';
 
-$ADDITIONAL_CONFIG_FILE_PATH = '/ncdata/web/config/additional.config.php';
+        $ADDITIONAL_CONFIG_FILE_PATH = '/ncdata/web/config/additional.config.php';
 
-$NC_CONFIG = spyc_load_file('/ncdata/config.yml');
-$ADDITIONAL_CONFIG = $NC_CONFIG['CONFIG_PHP'];
+        $NC_CONFIG = spyc_load_file('/ncdata/config.yml');
+        $ADDITIONAL_CONFIG = $NC_CONFIG['CONFIG_PHP'];
 
-file_put_contents(
-    $ADDITIONAL_CONFIG_FILE_PATH,
-    "<?php\n" . '$CONFIG = ' .var_export($ADDITIONAL_CONFIG, true) . ';'
-);
+        file_put_contents(
+            $ADDITIONAL_CONFIG_FILE_PATH,
+            "<?php\n" . '$CONFIG = ' .var_export($ADDITIONAL_CONFIG, true) . ';'
+        );
+        break;
+
+    case "reconfigure":
+        $key = $argv[2];
+        $newValue = $argv[3];
+        require_once 'lib/Reconfigurer.php';
+        $rc = new Reconfigurer($key, $newValue);
+        $rc->reconfigure();
+        break;
+    default:
+        throw new Exception("invalid operation specified.");
+        break;
+}
+
+
 
 
 /* file_put_contents('./hogehoge.txt', "<?php\n" . '$CONFIG = ' . var_export($CONFIG, true) . ';'); */

@@ -100,7 +100,7 @@ function buildDockerImages() {
     local -r PULL_FLAG=${1:-"withpull"}
 
     local -r SETUP_DOCKER_DIR=$(mktemp -d)
-    trap "final ${SETUP_DOCKER_DIR}" SIGINT EXIT SIGKILL
+    trap "rm -rf ${SETUP_DOCKER_DIR}" SIGINT EXIT SIGKILL SIGHUP
 
     curl -L ${TAR_BALL_URL} | tar xvz -C ${SETUP_DOCKER_DIR}
 
@@ -113,13 +113,6 @@ function buildDockerImages() {
     fi
 
     export COMPOSE_FILE=""
-}
-
-function final() {
-    local -r DIR=${1}
-    if [ -d "${DIR}" ]; then
-        rm -rf ${DIR}
-    fi
 }
 
 function serveNCContainers() {
@@ -220,7 +213,9 @@ function changeDBSetup() {
 
             export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
             docker-compose up -d db
-            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"localhost\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql "
+            sleep 1
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"localhost\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
+            # docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
             docker-compose down
             export COMPOSE_FILE=""
             ;;
@@ -229,6 +224,39 @@ function changeDBSetup() {
         "MYSQL user name")
             ;;
         "MYSQL user password")
+            #### 1. socket サーバを建てる
+            #### 2. configure を起動する。中でconfig を書き換えて、user名をsocketサーバに送信。
+            #### 3. サーバはホスト名を受け取ったら下を実行する。
+            #### 4. pid なくなるまでまつ
+            # 1. php コンテナーでconfig書き換えて、ファイルにdbホストの名前を記述
+            # 2. このスクリプト内側でパスワード変更
+  # 'dbname' => 'fugu',
+  # 'dbhost' => 'db',
+  # 'dbuser' => 'fugu',
+  # 'dbpassword' => 'fugu',
+            local currentPassword=""
+            local newPassword=""
+            inputEnv "Enter MYSQL root password: " currentPassword 1
+            inputEnv "Enter a new MYSQL user password: " newPassword 1 1
+
+            local -r TMP_DIR=$(mktemp -d)
+            trap "rm -rf ${TMP_DIR}" SIGINT EXIT SIGKILL SIGHUP
+
+            local -r TMP_FILE_PATH=${TMP_DIR}/dbuser.txt
+            touch ${TMP_FILE_PATH}
+
+            docker run --rm -v ${DATA_DIR}:/ncdata -v ${TMP_FILE_PATH}:/tmp/info.txt kensyo/ncconfigure reconfigure dbpassword ${newPassword}
+
+            local -r DB_USER=$(cat ${TMP_FILE_PATH})
+            rm -rf ${TMP_DIR}
+
+            export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+            docker-compose up -d db
+            sleep 1
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"${DB_USER}\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
+            docker-compose down
+            export COMPOSE_FILE=""
+            echo "MYSQL user password has successfully been changed."
             ;;
         *)
             echo "Something wrong." 1>&2
@@ -252,7 +280,7 @@ case ${1:-""} in
         waitUntilInstalled
         serveNCContainers stop
         docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
-        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure configure
         echo "Nextcloud successfully installed."
         echo 'Modify ncdata/config.yml and run `./nextcloud.sh rebuild` if you need, and then, run `./nextcloud start`'
         ;;
@@ -283,7 +311,7 @@ case ${1:-""} in
         serveNCContainers stop
         buildDockerImages withpull
         docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
-        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure configure
         echo "Successfully updated docker configurations."
         echo "Now restart nextcloud."
         ;;
@@ -292,7 +320,7 @@ case ${1:-""} in
         serveNCContainers stop
         # buildSetupDockerImage nopull
         docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
-        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure configure
         echo "Successfully rebuilt."
         echo "Now restart nextcloud."
         ;;
