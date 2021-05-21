@@ -222,18 +222,31 @@ function changeDBSetup() {
         "MYSQL database name")
             ;;
         "MYSQL user name")
+            local rootPassword=""
+            local newUsername=""
+            inputEnv "Enter MYSQL root password: " rootPassword 1
+            inputEnv "Enter a new MYSQL user name: " newUsername
+
+            local -r TMP_DIR=$(mktemp -d)
+            trap "rm -rf ${TMP_DIR}" SIGINT EXIT SIGKILL SIGHUP
+
+            local -r TMP_FILE_PATH=${TMP_DIR}/olddbuser.txt
+            touch ${TMP_FILE_PATH}
+
+            docker run --rm -v ${DATA_DIR}:/ncdata -v ${TMP_FILE_PATH}:/tmp/info.txt kensyo/ncconfigure reconfigure dbuser ${newUsername}
+
+            local -r OLD_DB_USER=$(cat ${TMP_FILE_PATH})
+            rm -rf ${TMP_DIR}
+
+            export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+            docker-compose up -d db
+            sleep 1
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=RENAME USER \"${OLD_DB_USER}\"@\"%%\" TO \"${newUsername}\"@\"%%\"\n' ${rootPassword} ) -uroot mysql"
+            docker-compose down
+            export COMPOSE_FILE=""
+            echo "MYSQL user name has successfully been changed from '${OLD_DB_USER}' to '${newUsername}'."
             ;;
         "MYSQL user password")
-            #### 1. socket サーバを建てる
-            #### 2. configure を起動する。中でconfig を書き換えて、user名をsocketサーバに送信。
-            #### 3. サーバはホスト名を受け取ったら下を実行する。
-            #### 4. pid なくなるまでまつ
-            # 1. php コンテナーでconfig書き換えて、ファイルにdbホストの名前を記述
-            # 2. このスクリプト内側でパスワード変更
-  # 'dbname' => 'fugu',
-  # 'dbhost' => 'db',
-  # 'dbuser' => 'fugu',
-  # 'dbpassword' => 'fugu',
             local rootPassword=""
             local newPassword=""
             inputEnv "Enter MYSQL root password: " rootPassword 1

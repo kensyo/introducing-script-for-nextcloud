@@ -14,10 +14,12 @@ function factory($args) {
         case "reconfigure":
             $key = $args[2];
             $newValue = $args[3];
+            require_once 'lib/Reconfigurer.php';
             switch ($key) {
+                case "dbuser":
+                    return new Reconfigurer($key, $newValue, "dbuser");
                 case "dbpassword":
-                    require_once 'lib/Reconfigurer.php';
-                    return new Reconfigurer($key, $newValue, 'dbuser');
+                    return new Reconfigurer($key, $newValue, "dbuser");
                 default:
                     throw new Exception("Invalid key name specified.");
             }
