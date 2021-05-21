@@ -234,9 +234,9 @@ function changeDBSetup() {
   # 'dbhost' => 'db',
   # 'dbuser' => 'fugu',
   # 'dbpassword' => 'fugu',
-            local currentPassword=""
+            local rootPassword=""
             local newPassword=""
-            inputEnv "Enter MYSQL root password: " currentPassword 1
+            inputEnv "Enter MYSQL root password: " rootPassword 1
             inputEnv "Enter a new MYSQL user password: " newPassword 1 1
 
             local -r TMP_DIR=$(mktemp -d)
@@ -253,7 +253,7 @@ function changeDBSetup() {
             export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
             docker-compose up -d db
             sleep 1
-            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"${DB_USER}\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"${DB_USER}\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${rootPassword} ${newPassword} ) -uroot mysql"
             docker-compose down
             export COMPOSE_FILE=""
             echo "MYSQL user password has successfully been changed."

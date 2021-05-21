@@ -1,30 +1,46 @@
 <?php
 
-class Reconfigurer {
+require_once 'lib/ConfigurerBase.php';
+
+class Reconfigurer extends ConfigurerBase {
+    protected const EXTERNAL_FILE_PATH = '/tmp/info.txt';
+
     private string $key;
     private string $newValue;
+    private string $keyToConvey;
 
-    private const CONFIG_FILE_PATh = '/ncdata/web/config/config.php';
-    private const OUTPUT_FILE_PATH = '/tmp/info.txt';
-
-    public function __construct(string $key, string $newValue) {
+    public function __construct(string $key, string $newValue, string $keyToConvey = "") {
+        require parent::CONFIG_FILE_PATh;
+        if (!array_key_exists($key, $CONFIG)) {
+            throw new Exception("Non-existent key was specififed.");
+        }
+        if (strcmp($keyToConvey, "") != 0 && !array_key_exists($keyToConvey, $CONFIG)) {
+            throw new Exception("Non-existent key was specififed.");
+        }
         $this->key = $key;
         $this->newValue = $newValue;
+        $this->keyToConvey = $keyToConvey;
     }
 
-    public function reconfigure() {
-        require_once self::CONFIG_FILE_PATh;
-
-        switch ($this->key) {
-            case "dbpassword":
-                file_put_contents(self::OUTPUT_FILE_PATH, $CONFIG['dbuser']);
-                break;
+    public function execute() {
+        if (strcmp($this->keyToConvey, "") != 0) {
+            $this->writeConfigValue();
         }
+        parent::execute();
+    }
 
+    protected function writeConfigValue() {
+        require parent::CONFIG_FILE_PATh;
+        file_put_contents(self::EXTERNAL_FILE_PATH, $CONFIG[$this->keyToConvey]);
+    }
+
+    protected function createContent() {
+        require parent::CONFIG_FILE_PATh;
         $CONFIG[$this->key] = $this->newValue;
-        file_put_contents(
-            self::CONFIG_FILE_PATh,
-            "<?php\n" . '$CONFIG = ' .var_export($CONFIG, true) . ';'
-        );
+        return $CONFIG;
+    }
+
+    protected function getOutputPath() {
+        return parent::CONFIG_FILE_PATh;
     }
 }

@@ -14,3 +14,4 @@ services:
     volumes:
       - ./configure/app:/usr/src/app
       - ../ncdata:/ncdata
+      - ../info.txt:/tmp/info.txt
