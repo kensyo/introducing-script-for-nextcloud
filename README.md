@@ -27,10 +27,13 @@ For self-update(updating this script itself),
 ```
 
 ## Configuration
-Edit `ncdata/config.yml`, then
+Edit `ncdata/config.yml`, which is created after installation, then
 ```bash
 ./nextcloud.sh rebuild
 ```
+
+## Backup
+Save `ncdata` directory.
 
 ## Help
 
