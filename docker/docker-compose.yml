@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  setup:
+    build: ./setup
+    image: kensyo/ncsetup
+    volumes:
+        - ./setup/app:/app
+        - ../ncdata:/ncdata
+
+  configure:
+    build: ./configure
+    image: kensyo/ncconfigure
+    volumes:
+      - ./configure/app:/usr/src/app
+      - ../ncdata:/ncdata
+      - ../info.txt:/tmp/info.txt

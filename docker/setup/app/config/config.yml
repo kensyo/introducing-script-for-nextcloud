@@ -1,0 +1,64 @@
+# data directory path
+DATA_DIR: /ncdata
+
+# the relative path from DATA_DIR of the directory where certs files are located
+CERTS_DIR_RELATIVE_PATH: certs
+
+# docker directory relative path from DATA_DIR
+DOCKER_DIR_RELATIVE_PATH: ncdocker
+
+# template opening delimiter
+TEMPLATE_DELIMITERS:
+  OPENING: '%%{'
+  CLOSING: '}%%'
+
+# config.yml parameters
+CONFIG_YML_DEFAULT_PARAMETERS:
+  PORT:
+    DEFAULT_VALUE: 8080
+    DESC: 'Port number for http.'
+
+  SSL:
+    DESC: 'ssl settings.'
+    CHILDREN:
+
+      ENABLE:
+        DEFAULT_VALUE: false
+        DESC: |
+          If true, use https mode, and you must accordingly
+          put cert and key files with the name,
+          [VIRTUAL_HOST].{crt, key}, in ./certs directory.
+          In addition, add like
+            CONFIG_PHP:
+              trusted_domains:
+                - **your virtual host**
+          to CONFIG_PHP below.
+
+      VIRTUAL_HOST:
+        DEFAULT_VALUE: 'Enter FQDN'
+        DESC: 'Access domain.'
+
+      PORT:
+        DEFAULT_VALUE: 8443
+        DESC: 'Port number for https.'
+
+  REDIS:
+    DEFAULT_VALUE: false
+    DESC: 'If this is true, use Redis. Redis is used to prevent race confitions.'
+
+  CRON:
+    DEFAULT_VALUE: false
+    DESC: 'If this is true, use Cron. Cron is used to execute background jobs.'
+
+  CONFIG_PHP:
+    # {} means an empty object
+    DEFAULT_VALUE: {}
+    DESC: |
+      Config values of nextcloud itself. If specified,
+      overwrite the contents of web/config/config.php.
+
+# the relative path of a nextcloud custom docker file from /ncdata/ncdocker directory
+CUSTOM_DOCKER_FILE_RELATIVE_PATH: app/Dockerfile
+
+# the relative path of a nextcloud custom docker file from /ncdata/ncdocker directory
+PROXY_DOCKER_FILE_RELATIVE_PATH: proxy/Dockerfile

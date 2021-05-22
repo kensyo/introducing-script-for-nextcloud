@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -u
+set -eu
 
 cat << EOF
 
@@ -28,14 +28,17 @@ declare -r SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 declare -r SCRIPT_NAME=$(basename "${0}")
 declare -r SCRIPT_PATH=${SCRIPT_DIR}/${SCRIPT_NAME}
 declare -r DATA_DIR=${SCRIPT_DIR}/ncdata
+declare -r CONFIG_YML=${DATA_DIR}/config.yml
 declare -r DOCKER_DIR=${DATA_DIR}/ncdocker
-declare -r APP_DOCKER_FILE_DIR=${DOCKER_DIR}/app
-declare -r APP_DOCKER_FILE_PATH=${APP_DOCKER_FILE_DIR}/Dockerfile
-declare -r YML=${DOCKER_DIR}/docker-compose.yml
+declare -r DOCKER_COMPOSE_YML=${DOCKER_DIR}/docker-compose.yml
 
-declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/kensyo/introducing-script-for-nextcloud/main"
+declare -r REPOSITORY_OWNER=kensyo
+declare -r REPOSITORY_NAME=introducing-script-for-nextcloud
+declare -r REPOSITORY_BRANCH=main
+declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/${REPOSITORY_BRANCH}"
+declare -r TAR_BALL_URL="https://github.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/archive/${REPOSITORY_BRANCH}.tar.gz"
 
-declare -r VERSION=v10
+declare -r VERSION=v11
 
 echo "SCRIPT VERSION: ${VERSION}"
 
@@ -56,7 +59,6 @@ fi
 echo ""
 
 # Functions
-
 function listCommands() {
 cat << "EOT"
 Available commands:
@@ -66,8 +68,10 @@ start
 stop
 restart
 update
-reinstall
+updateDockerConfs
+rebuild
 updateself
+changedbsetup
 help
 
 EOT
@@ -92,14 +96,59 @@ function checkDataDirectory() {
     fi
 }
 
-function setComposeFile() {
-    export COMPOSE_FILE=${YML}
+function buildDockerImages() {
+    local -r PULL_FLAG=${1:-"withpull"}
+
+    local -r SETUP_DOCKER_DIR=$(mktemp -d)
+    trap "rm -rf ${SETUP_DOCKER_DIR}" SIGINT EXIT SIGKILL SIGHUP
+
+    curl -L ${TAR_BALL_URL} | tar xvz -C ${SETUP_DOCKER_DIR}
+
+    export COMPOSE_FILE=${SETUP_DOCKER_DIR}/${REPOSITORY_NAME}-${REPOSITORY_BRANCH}/docker/docker-compose.yml
+
+    if [ "${PULL_FLAG}" = "withpull" ]; then
+        docker-compose build --pull
+    else
+        docker-compose build
+    fi
+
+    export COMPOSE_FILE=""
+}
+
+function serveNCContainers() {
+    local -r TYPE=${1}
+
+    export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+
+    if [ "${TYPE}" = "start" ]; then
+        docker-compose up -d
+    elif [ "${TYPE}" = "stop" ]; then
+        if [ $(docker-compose ps | wc -l) -gt 2 ]; then
+            docker-compose down
+        fi
+    fi
+
+    export COMPOSE_FILE=""
+}
+
+function waitUntilInstalled() {
+    # TODO: 最大ループ回数は決めておいたほうが良い
+    echo "Waiting for nextcloud to be initialized..."
+    sleep 30
+    while :
+    do
+        if grep -q "'installed' => true" ${DATA_DIR}/web/config/config.php > /dev/null 2>&1; then
+            break
+        fi
+        sleep 5
+    done
 }
 
 function inputEnv() {
     local -r PROMPT_MESSAGE=${1}
     local -r ENV_NAME=${2}
     local -r IS_SECRET=${3:-0} # 0 is false and 1 is true
+    local -r CONFIRMATION=${4:-0} # 0 is false and 1 is true
 
     while :
     do
@@ -115,11 +164,11 @@ function inputEnv() {
             continue
         fi
 
-        if [ ! "${IS_SECRET}" -eq 0 ]; then
+        if [ ! "${CONFIRMATION}" -eq 0 ]; then
             read -sp "Input again for confirmation: " confirmationInput
             tty -s && echo "" # -s つけると改行がいるっぽい
             if [ "${input}" != "${confirmationInput}" ]; then
-                echo "Does not coincide. Type again." 1>&2    
+                echo "Does not coincide. Type again." 1>&2
                 continue
             fi
         fi
@@ -127,129 +176,168 @@ function inputEnv() {
         eval ${ENV_NAME}=${input}
         break
     done
- 
+
 }
 
-function createAppDockerfile() {
-    mkdir -p ${APP_DOCKER_FILE_DIR}
+function changeDBSetup() {
+    local -ar OPTIONS=(
+        "MYSQL root password"
+        "MYSQL user name"
+        "MYSQL user password"
+    )
 
-cat <<-EOF > ${APP_DOCKER_FILE_PATH}
-FROM nextcloud
+    echo ""
+    for ((i = 0; i < ${#OPTIONS[@]}; i++)) {
+        echo "[$i]: ${OPTIONS[i]}"
+    }
 
-# for thumbnails
-# references:
-# https://help.nextcloud.com/t/cant-see-pdf-thumbnails-in-new-grid-view-but-works-in-the-demo-instance/43759
-# https://help.nextcloud.com/t/pdf-previews-are-not-generated/51942
-RUN apt-get update
-RUN apt-get install -y ghostscript ffmpeg imagemagick
-RUN sed -i 's#<policy domain="coder" rights="none" pattern="PDF" />#<policy domain="coder" rights="read|write" pattern="PDF" />#' /etc/ImageMagick-6/policy.xml
+    local index=0
+    while :
+    do
+        inputEnv "Which do you change? [0..$(( ${#OPTIONS[@]} - 1 ))]: " index
+        if [ 0 -le ${index} -a ${index} -lt ${#OPTIONS[@]} ]; then
+            break
+        else
+            echo "Choose out of [0..$(( ${#OPTIONS[@]} - 1 ))]"
+        fi
+    done
+    echo ""
 
-# for background jobs
-# references:
-# https://help.nextcloud.com/t/solved-occ-command-php-fatal-error-allowed-memory-size-of-xxx-bytes-exhausted/108521/29
-RUN sed -i 's#\*/5 \* \* \* \* php -f /var/www/html/cron.php#*/5 * * * * PHP_MEMORY_LIMIT=512M /usr/local/bin/php -f /var/www/html/cron.php#' /var/spool/cron/crontabs/www-data
-RUN apt-get install -y cron
-RUN crontab -u www-data /var/spool/cron/crontabs/www-data
+    case ${OPTIONS[${index}]} in
+        "MYSQL root password")
+            local  currentPassword=""
+            local newPassword=""
+            inputEnv "Enter the current password: " currentPassword 1
+            inputEnv "Enter a new password: " newPassword 1 1
 
-ENTRYPOINT sh -c "service cron start && /entrypoint.sh apache2-foreground"
+            export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+            docker-compose up -d db
+            sleep 1
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"localhost\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
+            # docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
+            docker-compose down
+            export COMPOSE_FILE=""
+            ;;
+        "MYSQL user name")
+            local rootPassword=""
+            local newUsername=""
+            inputEnv "Enter MYSQL root password: " rootPassword 1
+            inputEnv "Enter a new MYSQL user name: " newUsername
 
-EOF
-}
+            local -r TMP_DIR=$(mktemp -d)
+            trap "rm -rf ${TMP_DIR}" SIGINT EXIT SIGKILL SIGHUP
 
-function createDockerComposeYml() {
+            local -r TMP_FILE_PATH=${TMP_DIR}/olddbuser.txt
+            touch ${TMP_FILE_PATH}
 
-    inputEnv "Enter MYSQL_ROOT_PASSWORD: " MYSQL_ROOT_PASSWORD 1
-    inputEnv "Enter MYSQL_PASSWORD: " MYSQL_PASSWORD 1
-    inputEnv "Enter MYSQL_DATABASE(e.g. nextcloud): " MYSQL_DATABASE
-    inputEnv "Enter MYSQL_USER(e.g. nextcloud): " MYSQL_USER
-    inputEnv "Enter PORT(e.g. 8080): " PORT
+            docker run --rm -v ${DATA_DIR}:/ncdata -v ${TMP_FILE_PATH}:/tmp/info.txt kensyo/ncconfigure reconfigure dbuser ${newUsername}
 
-    mkdir -p ${DOCKER_DIR}
+            local -r OLD_DB_USER=$(cat ${TMP_FILE_PATH})
+            rm -rf ${TMP_DIR}
 
-cat <<- EOF > ${YML}
-version: '2'
+            export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+            docker-compose up -d db
+            sleep 1
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=RENAME USER \"${OLD_DB_USER}\"@\"%%\" TO \"${newUsername}\"@\"%%\"\n' ${rootPassword} ) -uroot mysql"
+            docker-compose down
+            export COMPOSE_FILE=""
+            echo "MYSQL user name has successfully been changed from '${OLD_DB_USER}' to '${newUsername}'."
+            ;;
+        "MYSQL user password")
+            local rootPassword=""
+            local newPassword=""
+            inputEnv "Enter MYSQL root password: " rootPassword 1
+            inputEnv "Enter a new MYSQL user password: " newPassword 1 1
 
-services:
-  db:
-    image: mariadb
-    restart: always
-    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
-    volumes:
-      - ../db:/var/lib/mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
+            local -r TMP_DIR=$(mktemp -d)
+            trap "rm -rf ${TMP_DIR}" SIGINT EXIT SIGKILL SIGHUP
 
-  app:
-    build: ./$(basename ${APP_DOCKER_FILE_DIR})
-    restart: always
-    ports:
-      - ${PORT}:80
-    links:
-      - db
-    volumes:
-      - ../web:/var/www/html
-    environment:
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_HOST=db
-EOF
+            local -r TMP_FILE_PATH=${TMP_DIR}/dbuser.txt
+            touch ${TMP_FILE_PATH}
+
+            docker run --rm -v ${DATA_DIR}:/ncdata -v ${TMP_FILE_PATH}:/tmp/info.txt kensyo/ncconfigure reconfigure dbpassword ${newPassword}
+
+            local -r DB_USER=$(cat ${TMP_FILE_PATH})
+            rm -rf ${TMP_DIR}
+
+            export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+            docker-compose up -d db
+            sleep 1
+            docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"${DB_USER}\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${rootPassword} ${newPassword} ) -uroot mysql"
+            docker-compose down
+            export COMPOSE_FILE=""
+            echo "MYSQL user password has successfully been changed."
+            ;;
+        *)
+            echo "Something wrong." 1>&2
+            exit 1
+            ;;
+    esac
 }
 
 # Commands
 
 case ${1:-""} in
     "install")
-        if [ -d "${DATA_DIR}" ]; then
-            echo "${DATA_DIR} already exists."
-            exit 1
+        if [ -e "${CONFIG_YML}" ]; then
+            echo "Nextcloud has already been installed."
+            exit 0
         fi
-        createAppDockerfile
-        createDockerComposeYml
+        mkdir -p ${DATA_DIR}
+        buildDockerImages withpull
+        docker run --rm -it -v ${DATA_DIR}:/ncdata kensyo/ncsetup install
+        serveNCContainers start
+        waitUntilInstalled
+        serveNCContainers stop
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure configure
+        echo "Nextcloud successfully installed."
+        echo 'Modify ncdata/config.yml and run `./nextcloud.sh rebuild` if you need, and then, run `./nextcloud start`'
         ;;
     "start")
         checkDataDirectory
-        setComposeFile
-        docker-compose up -d
+        serveNCContainers start
         ;;
     "stop")
         checkDataDirectory
-        setComposeFile
-        docker-compose down
+        serveNCContainers stop
         ;;
     "restart")
         checkDataDirectory
-        setComposeFile
-        docker-compose down
-        docker-compose up -d
+        serveNCContainers stop
+        serveNCContainers start
         ;;
     "update")
         checkDataDirectory
-        setComposeFile
-        docker-compose pull && docker-compose build --pull && echo "Now restart nextcloud."
+        serveNCContainers stop
+        export COMPOSE_FILE=${DOCKER_COMPOSE_YML}
+        docker-compose pull
+        docker-compose build --pull
+        export COMPOSE_FILE=""
+        echo "Now restart nextcloud."
         ;;
-    "reinstall")
+    "updateDockerConfs")
         checkDataDirectory
-        if [ -d "${DOCKER_DIR}" ]; then
-            echo "Remove and recreate docker configurations?"
-            read -p "(This operation doesn't give any change to your stored data.) (y/n): " ans
-            if [ ! "${ans}" = 'y' ]; then
-                exit 0
-            fi
-            rm -rf ${DOCKER_DIR}
-        else
-            echo "The docker directory not found."
-            read -p "Create it newly? (y/n): " ans
-            if [ ! "${ans}" = 'y' ]; then
-                exit 0
-            fi
-        fi
-        # create
-        createAppDockerfile
-        createDockerComposeYml
+        serveNCContainers stop
+        buildDockerImages withpull
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure configure
+        echo "Successfully updated docker configurations."
+        echo "Now restart nextcloud."
+        ;;
+    "rebuild")
+        checkDataDirectory
+        serveNCContainers stop
+        # buildSetupDockerImage nopull
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncsetup update
+        docker run --rm -v ${DATA_DIR}:/ncdata kensyo/ncconfigure configure
+        echo "Successfully rebuilt."
+        echo "Now restart nextcloud."
+        ;;
+    "changedbsetup")
+        checkDataDirectory
+        # serveNCContainers stop
+        changeDBSetup
         ;;
     "updateself")
         downloadSelf
