@@ -46,6 +46,10 @@ CONFIG_YML_DEFAULT_PARAMETERS:
     DEFAULT_VALUE: false
     DESC: 'If this is true, use Redis. Redis is used to prevent race confitions.'
 
+  CRON:
+    DEFAULT_VALUE: false
+    DESC: 'If this is true, use Cron. Cron is used to execute background jobs.'
+
   CONFIG_PHP:
     # {} means an empty object
     DEFAULT_VALUE: {}

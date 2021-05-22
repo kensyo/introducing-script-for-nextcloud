@@ -18,6 +18,8 @@ const PROXY_DOCKER_FILE_RELATIVE_PATH = CONFIG['PROXY_DOCKER_FILE_RELATIVE_PATH'
 
 const INDENTATION_WIDTH = 2;
 
+const REDIS_SERVICE_NAME = 'redis';
+
 // public
 function update() {
     if (!fs.existsSync(CONFIG_YML_PATH)) {
@@ -276,6 +278,7 @@ function createDockerComposeYml(ncConfig) {
     setImageOrBuild(base);
     setSslOrNot(base, ncConfig);
     setRedisOrNot(base, ncConfig);
+    setCronOrNot(base, ncConfig);
 
     // make sure to create docker dir, though docker dir should be created at installation.
     fs.mkdirsSync(DOCKER_DIR);
@@ -345,7 +348,6 @@ function setSslOrNot(base, ncConfig) {
 
 function setRedisOrNot(base, ncConfig) {
     if (ncConfig['REDIS']) {
-        const REDIS_SERVICE_NAME = 'redis';
 
         // app services additional configuration
         base['services']['app']['depends_on'].push(REDIS_SERVICE_NAME);
@@ -356,6 +358,23 @@ function setRedisOrNot(base, ncConfig) {
             'image': 'redis:alpine',
             'restart': 'always'
         };
+    }
+}
+
+function setCronOrNot(base, ncConfig) {
+    if (ncConfig['CRON']) {
+
+        base['services']['cron'] = {
+            'image': 'nextcloud',
+            'restart': 'always',
+            'volumes': [ '../web:/var/www/html' ],
+            'entrypoint': '/cron.sh',
+            'depends_on': [ 'db' ]
+        };
+
+        if (ncConfig['REDIS']) {
+            base['services']['cron']['depends_on'].push(REDIS_SERVICE_NAME);
+        }
     }
 }
 
