@@ -38,7 +38,7 @@ declare -r REPOSITORY_BRANCH=main
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/${REPOSITORY_BRANCH}"
 declare -r TAR_BALL_URL="https://github.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/archive/${REPOSITORY_BRANCH}.tar.gz"
 
-declare -r VERSION=v11
+declare -r VERSION=v12
 
 echo "SCRIPT VERSION: ${VERSION}"
 
@@ -184,6 +184,7 @@ function changeDBSetup() {
         "MYSQL root password"
         "MYSQL user name"
         "MYSQL user password"
+        "Exit"
     )
 
     echo ""
@@ -268,6 +269,9 @@ function changeDBSetup() {
             export COMPOSE_FILE=""
             echo "MYSQL user password has successfully been changed."
             ;;
+        "Exit")
+            exit 0
+            ;;
         *)
             echo "Something wrong." 1>&2
             exit 1
@@ -336,7 +340,8 @@ case ${1:-""} in
         ;;
     "changedbsetup")
         checkDataDirectory
-        # serveNCContainers stop
+        serveNCContainers stop
+        echo "This function may be unsafe. Use after you backup nextcloud."
         changeDBSetup
         ;;
     "updateself")

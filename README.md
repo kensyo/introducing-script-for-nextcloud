@@ -26,33 +26,10 @@ For self-update(updating this script itself),
 ./nextcloud.sh updateself
 ```
 
-## Show thumbnails
-Add the following options to `ncdata/web/config/config.php`
-```
-'enable_previews' => true,
-'enabledPreviewProviders' => array (
-   'OC\Preview\PNG',
-   'OC\Preview\JPEG',
-   'OC\Preview\GIF',
-   'OC\Preview\BMP',
-   'OC\Preview\XBitmap',
-   'OC\Preview\MP3',
-   'OC\Preview\TXT',
-   'OC\Preview\MarkDown',
-   'OC\Preview\PDF'
-),
-```
-Then run
+## Configuration
+Edit `ncdata/config.yml`, then
 ```bash
-./nextcloud.sh restart
-```
-
-NOTE: `ncdata/web/config/config.php` is created after you start nextcloud at least once.
-
-## Reinstall
-If you want to change the docker container settings such as port, sql password and so on, run
-```bash
-./nextcloud.sh reinstall
+./nextcloud.sh rebuild
 ```
 
 ## Help
