@@ -182,7 +182,6 @@ function inputEnv() {
 function changeDBSetup() {
     local -ar OPTIONS=(
         "MYSQL root password"
-        "MYSQL database name"
         "MYSQL user name"
         "MYSQL user password"
     )
@@ -218,8 +217,6 @@ function changeDBSetup() {
             # docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
             docker-compose down
             export COMPOSE_FILE=""
-            ;;
-        "MYSQL database name")
             ;;
         "MYSQL user name")
             local rootPassword=""
