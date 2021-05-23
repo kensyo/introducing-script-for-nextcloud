@@ -38,7 +38,7 @@ declare -r REPOSITORY_BRANCH=main
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/${REPOSITORY_BRANCH}"
 declare -r TAR_BALL_URL="https://github.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/archive/${REPOSITORY_BRANCH}.tar.gz"
 
-declare -r VERSION=v16
+declare -r VERSION=v17
 
 echo "SCRIPT VERSION: ${VERSION}"
 
