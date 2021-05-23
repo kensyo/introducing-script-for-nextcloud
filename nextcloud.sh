@@ -38,7 +38,7 @@ declare -r REPOSITORY_BRANCH=main
 declare -r GITHUB_BASE_URL="https://raw.githubusercontent.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/${REPOSITORY_BRANCH}"
 declare -r TAR_BALL_URL="https://github.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/archive/${REPOSITORY_BRANCH}.tar.gz"
 
-declare -r VERSION=v15
+declare -r VERSION=v16
 
 echo "SCRIPT VERSION: ${VERSION}"
 
@@ -218,6 +218,7 @@ function changeDBSetup() {
             # docker-compose exec db bash -c "mysql --defaults-file=<( printf '[client]\npassword=%s\nexecute=ALTER USER \"root\"@\"%%\" IDENTIFIED BY \"%s\"\n' ${currentPassword} ${newPassword} ) -uroot mysql"
             docker-compose down
             export COMPOSE_FILE=""
+            echo "MYSQL root password has successfully been changed."
             ;;
         "MYSQL user name")
             local rootPassword=""
@@ -341,7 +342,7 @@ case ${1:-""} in
     "changedbsetup")
         checkDataDirectory
         serveNCContainers stop
-        echo "This function may be unsafe. Use after you backup nextcloud."
+        echo "This feature may be unsafe. Use after you back up nextcloud."
         changeDBSetup
         ;;
     "updateself")
