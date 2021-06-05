@@ -42,6 +42,23 @@ CONFIG_YML_DEFAULT_PARAMETERS:
         DEFAULT_VALUE: 8443
         DESC: 'Port number for https.'
 
+  EXTERNAL_PROXY:
+    CHILDREN:
+      ENABLE:
+        DEFAULT_VALUE: false
+        DESC: |
+          If you already have another running jwilder/nginx-proxy container,
+          turning this on lets your nextcloud container join the proxy network.
+          Then, PORT and SSL settings are ignored.
+
+      NETWORK_NAME:
+        DEFAULT_VALUE: Enter the docker network
+        DESC: 'The name of the network you want to let your nextcloud container join'
+
+      VIRTUAL_HOST:
+        DEFAULT_VALUE: 'Enter FQDN'
+        DESC: 'Access domain.'
+
   REDIS:
     DEFAULT_VALUE: false
     DESC: 'If this is true, use Redis. Redis is used to prevent race confitions.'
