@@ -315,7 +315,7 @@ function setExternalProxy(base, ncConfig) {
     ];
 
     base['networks'] = {
-        EXTERNAL_PROXY_NETWORK_NAME: {
+        [EXTERNAL_PROXY_NETWORK_NAME]: {
             external: true
         }
     };
