@@ -276,7 +276,11 @@ function createDockerComposeYml(ncConfig) {
     const base = util.loadYml('files/base-docker-compose.yml');
 
     setImageOrBuild(base);
-    setSslOrNot(base, ncConfig);
+    if (ncConfig['EXTERNAL_PROXY']['ENABLE']) {
+        setExternalProxy(base, ncConfig);
+    } else {
+        setSslOrNot(base, ncConfig);
+    }
     setRedisOrNot(base, ncConfig);
     setCronOrNot(base, ncConfig);
 
@@ -296,6 +300,25 @@ function setImageOrBuild(base) {
     } else {
         base['services']['app']['image'] = 'nextcloud';
     }
+}
+
+function setExternalProxy(base, ncConfig) {
+    const EXTERNAL_PROXY_CONFIG = ncConfig['EXTERNAL_PROXY'];
+
+    base['services']['app']['environment'].push(`VIRTUAL_HOST=${EXTERNAL_PROXY_CONFIG['VIRTUAL_HOST']}`);
+
+    const EXTERNAL_PROXY_NETWORK_NAME = EXTERNAL_PROXY_CONFIG['NETWORK_NAME'];
+
+    base['services']['app']['networks'] = [
+        EXTERNAL_PROXY_NETWORK_NAME,
+        'default'
+    ];
+
+    base['networks'] = {
+        [EXTERNAL_PROXY_NETWORK_NAME]: {
+            external: true
+        }
+    };
 }
 
 function setSslOrNot(base, ncConfig) {
